@@ -51,6 +51,47 @@ test('the false positives are stated, not buried', () => {
     'a wild sweep with zero false positives means the labels are being graded generously');
 });
 
+test('the Wilson interval stays inside [0,1] and stays wide when n is small', () => {
+  const { wilson } = require('../benchmarks/wild-precision');
+
+  // The case the normal approximation gets wrong: 0 of 1 gives [0, 0] there,
+  // claiming certainty from one observation. Two tells have exactly n=1.
+  const one = wilson(0, 1);
+  assert.strictEqual(one.lo, 0);
+  assert.ok(one.hi > 0.5, `0/1 must stay wide, got hi=${one.hi}`);
+
+  // A perfect count is never certainty either.
+  const perfect = wilson(21, 21);
+  assert.strictEqual(perfect.hi, 1);
+  assert.ok(perfect.lo < 1, '21/21 must not claim a lower bound of 100%');
+
+  // The published headline, to two decimals, so a change to the maths is visible.
+  const headline = wilson(29, 31);
+  assert.ok(headline.lo > 0.78 && headline.lo < 0.80, `29/31 lo drifted: ${headline.lo}`);
+  assert.ok(headline.hi > 0.97 && headline.hi < 0.99, `29/31 hi drifted: ${headline.hi}`);
+
+  for (const [k, n] of [[0, 0], [0, 5], [5, 5], [3, 7], [1, 100]]) {
+    const { lo, hi } = wilson(k, n);
+    assert.ok(lo >= 0 && hi <= 1 && lo <= hi, `wilson(${k},${n}) escaped [0,1]: [${lo}, ${hi}]`);
+  }
+});
+
+test('a breakdown reports groups that produced nothing, rather than omitting them', () => {
+  // A tell with no wild findings is unmeasured. Dropping the row reads as if it
+  // had been measured and had done fine.
+  const { breakdown } = require('../benchmarks/wild-precision');
+  const rows = breakdown(
+    [{ tell: 'skip' }, { tell: 'skip' }],
+    (f) => f.tell,
+    () => 'tp',
+    ['skip', 'swallow'],
+  );
+  const swallow = rows.find((r) => r.group === 'swallow');
+  assert.ok(swallow, 'a group with no findings must still appear');
+  assert.strictEqual(swallow.n, 0);
+  assert.strictEqual(swallow.precision, null, 'no findings means no precision, not 0% and not 100%');
+});
+
 test('the scorer refuses to invent a recall number', () => {
   const src = fs.readFileSync(path.join(ROOT, 'benchmarks/wild-precision.js'), 'utf8');
   assert.match(src, /recall/i);

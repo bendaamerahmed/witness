@@ -26,7 +26,7 @@ An item moves to **Done** when it is measured and published, not when it is writ
 
 The gap this release set out to close: witness could say how often it speaks, not how often it is right.
 
-- [x] **Hand-labelled the wild sweep.** A verdict and a written reason on every one of the 31 findings, in [`benchmarks/wild-labels.json`](../benchmarks/wild-labels.json). **93.5% precision by finding (29/31), 81.8% by issue (9/11)**, both false positives published by name.
+- [x] **Hand-labelled the wild sweep.** A verdict and a written reason on every one of the 31 findings, in [`benchmarks/wild-labels.json`](../benchmarks/wild-labels.json). **93.5% precision by finding (29/31), 81.8% by issue (9/11)**, both false positives published by name. v0.5.0 added the intervals: 79–98% and 52–95%.
 - [x] **Pinned the sweep.** [`wild-pins.json`](../benchmarks/wild-pins.json) fixes the exact upstream commits, so the numbers are reproducible on any machine and the labels stay attached to the findings they describe. `--head` still sweeps today's upstream for finding new failure modes.
 - [x] **Scored it in CI.** `npm run wild:precision` fails on precision below floor, on an unlabelled finding, and on a label describing a finding that no longer occurs — the last two being what stops labels drifting away from the detector.
 - [x] Two more detector bugs found by reading findings by hand: a test *name* containing "should" counted as an assertion, and Go's `_, err :=` read as a discarded error. The second was **removed rather than repaired** — a regex cannot see whether the discarded return is an `error`, and the obvious replacement produced 34 false positives in `gin`.
@@ -45,18 +45,21 @@ Going public changed the threat model: the Action became something a stranger ca
 - [x] Replaced the raw NUL bytes in `hooks/witness-detect.js` with `\u0000` escapes. A deliberate sentinel that worked, but ripgrep classified the detector as binary and refused to search it while git's 8000-byte sniff did not. Identical at runtime; both gates unmoved.
 - [x] The release workflow reports provenance instead of crashing on it: `d.dist.attestations` threw a `TypeError` that `|| true` swallowed, on the first release that actually carried provenance.
 
-## Next — v0.5.0: make the precision figure stand up
+## Done — v0.5.0: error bars, and where the number actually comes from
 
-93.5% is one rater's opinion, and the rater maintains the tool. That is the weakest load-bearing number in the project now.
+93.5% was being read as a precise number. It is 29 observations out of 31, and it was carrying the reputation of seven rules across four languages.
 
-**Exit criterion:** the headline precision figure is reported per tell and per language with a stated interval, and no single rater can move it alone.
+- [x] **An interval, not a point.** Every published rate now prints its Wilson 95% interval: **93.5% by finding is 79–98%**, and **81.8% by issue is 52–95%**. Wilson rather than the normal approximation, which returns `[0%, 0%]` for 0 of 1 — a claim of certainty from one observation, and a case that is an actual row in the table below. The interval appears everywhere the figure does: README badge and table, `docs/TELLS.md`, `docs/CI.md`, the sweep write-up and the scorer itself.
+- [x] **Per tell, not aggregate.** `moved goalpost` is 21 of the 31 findings, so the headline was very largely a statement about one rule. Four of the six default rules have three findings or fewer between them, and the two false positives are the *entire* wild sample for `softened assertion` and `fixture fitting` — rows that now read `0.0% [0.0%, 79.3%]` rather than being averaged into silence. Rules that never fired are printed with `n=0` and *unmeasured*, because omitting them reads as if they had been measured and had done fine.
+- [x] **Per language, with exposure.** Each row carries the commits scanned that produced it: JavaScript 19 findings from 33 commits (all from one repository), TypeScript 6 from 39, Python 5 from 72, Go **1 from 27**. "27 Go commits and one Go finding" is not a measurement of Go, and `[20.7%, 100.0%]` is the arithmetic saying so.
 
-- [ ] **Inter-rater agreement.** A second labeller on the same 31 findings, with Cohen's κ published even if it is bad. One labeller is one opinion; the labels file takes pull requests for exactly this.
-- [ ] **Per-language precision.** Every rule is language-shaped, and the sweep is Python- and JS-heavy: 27 Go commits and one Go finding is not a measurement of Go.
-- [ ] **A confusion matrix per tell**, not aggregates. `moved goalpost` is 21 of 31 findings and is carrying the headline number for all seven tells.
-- [ ] **A wild recall estimate.** Precision is the cheap half. Recall means reading commits witness said nothing about — even a hand-labelled sample of 40 would replace a blank with a range.
-- [ ] Widen the sweep past five repositories, and past the healthy-codebase bias: these were picked because anything witness says about them is probably witness's fault.
-- [ ] **An interval, not a point.** 29/31 is a small sample and 93.5% reads far more precise than it is. Publish a confidence interval next to it everywhere the number appears, so the honest width is visible.
+## Next — v0.5.1: independence, which needs a second person
+
+The three items below were cut from v0.5.0 for one reason: **none of them can be done by the person or process that produced the first set of labels.** Generating a second opinion from the same source and publishing it as agreement would be, exactly and precisely, making a check pass without making the thing right. This project does not get to do that to its own headline number.
+
+- [ ] **Inter-rater agreement.** A second labeller on the same 31 findings, with Cohen's κ published even if it is bad. The labels file takes pull requests for exactly this, and `.github/ISSUE_TEMPLATE/false-positive.yml` is the other door in.
+- [ ] **A wild recall estimate.** Precision is the cheap half. Recall means reading commits witness said *nothing* about — a hand-labelled sample of 40 would replace a blank with a range. It is unmeasured today and says so in every place the precision figure appears.
+- [ ] Widen the sweep past five repositories, and past the healthy-codebase bias: these were picked because anything witness says about them is probably witness's fault. New repositories mean new findings, and every new finding needs a verdict and a written reason before it counts.
 
 ## Then — v0.6.0: widen the science
 

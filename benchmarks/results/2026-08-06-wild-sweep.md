@@ -12,8 +12,8 @@ Three rounds happened in one day. All three are kept here, because the first two
 | findings | 136 | 35 | **31** |
 | findings per 100 commits | 122 | 20.5 | **18.1** |
 | issues per 100 commits | — | 11.1 | **6.4** |
-| finding precision | — | — | **93.5%** (29/31) |
-| issue precision | — | — | **81.8%** (9/11) |
+| finding precision | — | — | **93.5%** (29/31), 95% CI 79–98% |
+| issue precision | — | — | **81.8%** (9/11), 95% CI 52–95% |
 | commits pinned | no | no | **yes** |
 
 ## Round one — 136 findings, and what they actually were
@@ -56,10 +56,30 @@ That second one is in the corpus as a case whose label was deliberately *changed
 Every one of the 31 findings now carries a hand-written verdict in [`benchmarks/wild-labels.json`](../wild-labels.json), with a reason attached to each:
 
 ```
-  FINDING precision  93.5%   (29/31)
-  ISSUE precision    81.8%   (9/11)
+  FINDING precision  93.5%   (29/31)   95% CI [79.3%, 98.2%]
+  ISSUE precision    81.8%   (9/11)    95% CI [52.3%, 94.9%]
   recall             not computable here
+
+  per tell
+  group                  n  tp  fp  precision   95% CI
+  moved goalpost        21  21   0     100.0%   [84.5%, 100.0%]
+  swallow                5   5   0     100.0%   [56.6%, 100.0%]
+  skip                   2   2   0     100.0%   [34.2%, 100.0%]
+  fixture fitting        1   0   1       0.0%   [0.0%, 79.3%]
+  no-op fix              1   1   0     100.0%   [20.7%, 100.0%]
+  softened assertion     1   0   1       0.0%   [0.0%, 79.3%]
+
+  per language
+  group                     n  tp  fp  precision   95% CI
+  javascript (33 commits)  19  19   0     100.0%   [83.2%, 100.0%]
+  typescript (39 commits)   6   5   1      83.3%   [43.6%, 97.0%]
+  python (72 commits)       5   4   1      80.0%   [37.6%, 96.4%]
+  go (27 commits)           1   1   0     100.0%   [20.7%, 100.0%]
 ```
+
+**Read the breakdown before the headline.** `moved goalpost` is 21 of the 31 findings, so the aggregate is very largely a statement about one rule. Four of the six rules in the scanner default have three findings or fewer between them, and the two false positives are the *entire* wild sample for `softened assertion` and `fixture fitting` — which is why those rows read 0% with an interval running to 79%. That is not "these rules are wrong"; it is "these rules have been tested once each."
+
+The per-language rows are worse in the same way. 19 of 33 JavaScript findings come from a single repository, and Go contributes one finding from 27 commits. `27 Go commits and one Go finding` is not a measurement of Go, and the interval `[20.7%, 100.0%]` is the arithmetic saying so.
 
 **The two false positives, in the open:**
 

@@ -6,7 +6,7 @@ Six of these came from the literature. The seventh, **moved goalpost**, came fro
 
 Detector source: [`hooks/witness-detect.js`](../hooks/witness-detect.js). Labeled corpus: [`benchmarks/corpus/cases.js`](../benchmarks/corpus/cases.js).
 
-**How accurate is this.** On [171 real merged commits](../benchmarks/results/2026-08-06-wild-sweep.md), hand-labelled one by one: **93.5% precision by finding, 81.8% by issue**, with both false positives named below in the sections of the rules that produced them. Recall in the wild is unmeasured and stated as unmeasured. Where a rule has a known blind spot, it says so under **What it gets wrong** rather than in a footnote.
+**How accurate is this.** On [171 real merged commits](../benchmarks/results/2026-08-06-wild-sweep.md), hand-labelled one by one: **93.5% precision by finding (95% CI 79–98%), 81.8% by issue (95% CI 52–95%)**, with both false positives named below in the sections of the rules that produced them. `npm run wild:precision` also prints the figure per tell and per language; several of those cells rest on one or two findings, and their intervals say so rather than reading as verdicts. Recall in the wild is unmeasured and stated as unmeasured. Where a rule has a known blind spot, it says so under **What it gets wrong** rather than in a footnote.
 
 ---
 

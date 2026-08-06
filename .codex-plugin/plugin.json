@@ -1,6 +1,6 @@
 {
   "name": "witness",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Proof-of-work mode. Every completion claim carries evidence: reproduce the failure, fix the code under test, show the same unmodified check passing. Catches the seven ways a green check lies.",
   "author": {
     "name": "Ahmed Ben Daamer",

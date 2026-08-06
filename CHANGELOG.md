@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.5.0] — 2026-08-07
+
+The release where the headline number stopped pretending to be precise.
+
+93.5% was being read as a measurement. It is 29 of 31 observations, and it was carrying the reputation of six rules across four languages. Nothing about the detector changed here — both gates sit exactly where they did. What changed is that the number now says how much it knows.
+
+### Added
+
+- **A Wilson 95% confidence interval on every published rate.** By finding: **93.5%, CI 79–98%**. By issue: **81.8%, CI 52–95%**. The interval appears everywhere the figure does — README badge and headline table, `docs/TELLS.md`, `docs/CI.md`, the sweep write-up, and the scorer's own output. Wilson rather than the normal approximation, which returns `[0%, 0%]` for 0 successes of 1 — certainty asserted from a single observation, and not a hypothetical: two rules have exactly one wild finding each.
+- **Per-tell breakdown.** `moved goalpost` is 21 of the 31 findings, so the aggregate was very largely a statement about one rule. Four of the six default rules have three findings or fewer between them. The two false positives are the *entire* wild sample for `softened assertion` and `fixture fitting`, which now read `0.0% [0.0%, 79.3%]` — one observation each, not a verdict.
+- **Per-language breakdown, with exposure.** Each row carries the commits that produced it: JavaScript 19 findings from 33 commits (all one repository), TypeScript 6 from 39, Python 5 from 72, Go **1 from 27**. The roadmap said "27 Go commits and one Go finding is not a measurement of Go"; `[20.7%, 100.0%]` is now the arithmetic saying so in the output.
+- Rules that produced nothing are printed with `n=0` and *unmeasured* rather than omitted. A missing row reads as if the rule had been measured and had done fine. `suppression` is named explicitly as absent from the sweep, since it is not in the scanner default.
+
+### Notes
+
+- **Inter-rater agreement, a wild recall estimate, and a wider sweep are deliberately not in this release.** All three require a labeller who is not the source of the first set of labels. Manufacturing a second opinion and publishing it as agreement would be making a check pass without making the thing right, which is the one thing this project cannot do to its own headline figure. They are v0.5.1, and the labels file takes pull requests.
+- The detector is untouched: 71/71 on the corpus, 93.5% / 81.8% in the wild, both gates green.
+
+### Fixed
+
+- `package.json` declared its bins as `./bin/witness-scan.js`. npm rewrites that to `bin/witness-scan.js` on publish and warns about it on every release; the published manifest was always correct, but a warning nobody can act on trains you to skip the publish log, which is where real failures print. A test now rejects the `./` prefix.
+
 ## [0.4.2] — 2026-08-07
 
 The storefront caught up with the product, and the manifest that ships this thing is finally gated like everything else in it.

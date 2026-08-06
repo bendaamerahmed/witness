@@ -124,6 +124,17 @@ test('every declared bin exists and is executable as a script', () => {
   }
 });
 
+test('bin paths carry no "./" prefix', () => {
+  // npm rewrites "./bin/x.js" to "bin/x.js" on publish and warns about it on
+  // every release: `"bin[witness]" script name bin/witness-scan.js was invalid
+  // and removed`. The package works either way — the published manifest is the
+  // corrected one — but a warning nobody can act on trains you to skip the
+  // publish log, which is where the real failures are printed.
+  for (const [name, rel] of Object.entries(json('package.json').bin)) {
+    assert.ok(!rel.startsWith('./'), `bin "${name}" is "${rel}"; npm rewrites it and warns. Drop the "./".`);
+  }
+});
+
 test('a scoped package declares a bin matching the name after the scope', () => {
   // `npx @scope/name` resolves the bin called `name`. Without it, npx on a
   // scoped package either guesses or fails, and every npx line in the docs breaks.

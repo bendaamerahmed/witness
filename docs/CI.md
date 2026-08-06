@@ -18,7 +18,7 @@ On [171 real merged commits](../benchmarks/results/2026-08-06-wild-sweep.md) fro
 | --- | ---: |
 | issues per 100 commits | **6.4** — roughly one per sixteen |
 | findings per 100 commits | 18.1 |
-| precision, hand-labelled | **93.5%** by finding, 81.8% by issue |
+| precision, hand-labelled | **93.5%** by finding (95% CI 79–98%), 81.8% by issue (95% CI 52–95%) |
 
 An *issue* is what you read; a *finding* is a line annotated. One express commit changed `Content-Disposition` quoting across seventeen assertion sites — seventeen findings, one decision, and the text, Markdown, HTML and PDF reports collapse it into one issue with the sites listed underneath. SARIF deliberately does not group, because GitHub annotates lines.
 
