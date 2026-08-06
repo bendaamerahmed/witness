@@ -1,6 +1,6 @@
 {
   "name": "witness-mode",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Proof-of-work mode for AI coding agents. A green check is not evidence. It is a claim.",
   "license": "MIT",
   "author": "Ahmed Ben Daamer",
