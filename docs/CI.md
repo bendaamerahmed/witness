@@ -45,6 +45,8 @@ jobs:
 
 Findings land in the job summary and, with `security-events: write`, in the repository's code scanning tab as `note`-level annotations on the exact lines.
 
+On **Dependabot** pull requests set `upload-sarif: false` (or `${{ github.actor != 'dependabot[bot]' }}`). Those runs get a read-only token whatever `permissions:` says, so the upload fails the job with *Resource not accessible by integration*. The scan and the job summary still work.
+
 ### Inputs
 
 | input | default | what it does |
@@ -60,8 +62,10 @@ Findings land in the job summary and, with `security-events: write`, in the repo
 
 | output | what |
 | --- | --- |
-| `findings` | number of findings |
+| `findings` | number of annotated sites |
+| `issues` | number of distinct issues, after grouping sites that are one decision |
 | `tells` | comma-separated tells found |
+| `status` | `clean` or `findings` — branch on this rather than comparing numbers |
 
 ### Gating on one tell
 

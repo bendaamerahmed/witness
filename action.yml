@@ -38,9 +38,15 @@ outputs:
   findings:
     description: 'Number of findings.'
     value: ${{ steps.scan.outputs.findings }}
+  issues:
+    description: 'Number of distinct issues, after grouping sites that are one decision.'
+    value: ${{ steps.scan.outputs.issues }}
   tells:
     description: 'Comma-separated list of tells found.'
     value: ${{ steps.scan.outputs.tells }}
+  status:
+    description: 'clean or findings.'
+    value: ${{ steps.scan.outputs.status }}
 
 runs:
   using: composite
@@ -78,11 +84,14 @@ runs:
         # Read the same findings back as JSON for the outputs and summary. The
         # scan is cheap and pure, so running it twice is simpler than teaching
         # the CLI to emit two formats at once.
-        node "${GITHUB_ACTION_PATH}/bin/witness-scan.js" --base "$WITNESS_BASE" --json > witness.json || true
-        COUNT=$(node -e "try{console.log(JSON.parse(require('fs').readFileSync('witness.json','utf8')).findings.length)}catch(e){console.log(0)}")
-        TELLS=$(node -e "try{console.log(JSON.parse(require('fs').readFileSync('witness.json','utf8')).tells.join(','))}catch(e){console.log('')}")
-        echo "findings=${COUNT}" >> "$GITHUB_OUTPUT"
-        echo "tells=${TELLS}" >> "$GITHUB_OUTPUT"
+        #
+        # The JSON is turned into outputs by a script rather than by inline
+        # `node -e`, because inline shell in a YAML string is covered by no test:
+        # the previous version took the length of a `findings` value that became
+        # a plain number in 0.3.0, and printed "undefined finding(s)". See
+        # scripts/action-outputs.js and tests/contract.test.js.
+        node "${GITHUB_ACTION_PATH}/bin/witness-scan.js" --base "$WITNESS_BASE" --format json > witness.json || true
+        node "${GITHUB_ACTION_PATH}/scripts/action-outputs.js" witness.json >> "$GITHUB_OUTPUT"
         echo "exit=${SCAN_EXIT}" >> "$GITHUB_OUTPUT"
         exit 0
 
@@ -94,10 +103,10 @@ runs:
         {
           echo "### Witness — test integrity scan"
           echo
-          if [ "${{ steps.scan.outputs.findings }}" = "0" ]; then
+          if [ "${{ steps.scan.outputs.status }}" != "findings" ]; then
             echo "No tells found in this diff."
           else
-            echo "**${{ steps.scan.outputs.findings }} finding(s):** \`${{ steps.scan.outputs.tells }}\`"
+            echo "**${{ steps.scan.outputs.issues }} issue(s) across ${{ steps.scan.outputs.findings }} site(s):** \`${{ steps.scan.outputs.tells }}\`"
             echo
             echo '```'
             node "${GITHUB_ACTION_PATH}/bin/witness-scan.js" --base "${{ steps.base.outputs.ref }}" 2>/dev/null || true
@@ -109,7 +118,7 @@ runs:
 
     - name: Upload SARIF
       if: inputs.upload-sarif == 'true'
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: ${{ inputs.sarif-file }}
         category: witness

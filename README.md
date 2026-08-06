@@ -189,7 +189,7 @@ Four instrument bugs were found and are documented in the write-up — three by 
 ## Development
 
 ```bash
-npm run verify          # drift, versions, links, 112 tests, corpus precision gate
+npm run verify          # drift, versions, links, 122 tests, corpus precision gate
 npm run wild:clone      # ~200MB of clones, once
 npm run wild            # the pinned sweep over 171 real merged commits
 npm run wild:precision   # score that sweep against the hand-labels

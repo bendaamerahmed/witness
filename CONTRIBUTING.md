@@ -5,7 +5,7 @@ The rules this project applies to agents apply to the humans working on it too. 
 ## Before you open a pull request
 
 ```bash
-npm run verify        # rule-copy drift, manifest versions, links, 112 tests, corpus precision gate
+npm run verify        # rule-copy drift, manifest versions, links, 122 tests, corpus precision gate
 npm run selftest      # benchmark instrument (needs python + pytest)
 ```
 

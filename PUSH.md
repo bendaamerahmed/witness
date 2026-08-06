@@ -45,7 +45,7 @@ If GitHub shows the commits as unattributed, add `ahmed.b.daamer@gmail.com` to y
 
 | job | what it does |
 | --- | --- |
-| `verify` | 3 OSes × 3 Node versions: rule-copy drift, manifest versions, doc links, 112 tests, precision gate |
+| `verify` | 3 OSes × 3 Node versions: rule-copy drift, manifest versions, doc links, 122 tests, precision gate |
 | `instrument` | proves the benchmark harness can still tell a real fix from a fixture-fitted one |
 | `dogfood` | witness scans its own pull requests (PRs only) |
 | `action-smoke` | runs the Action end to end on Linux and Windows |

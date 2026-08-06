@@ -20,6 +20,18 @@ v0.3.0 could say how often witness speaks. It could not say how often it is righ
 - **Go's `_, err :=` was read as a discarded error.** It is the opposite — it discards the byte count and keeps the error. The obvious repair, flagging `value, _ :=`, produced 34 findings in `gin`, every one ordinary code, because a regex cannot see whether the discarded position holds an `error`. **The rule was removed rather than repaired.** `_ = err` on its own line is still caught. A tell that needs types belongs in a type checker.
 - **Grouping under-collapsed.** Evidence is truncated for display, which cuts string literals in half and leaves the opening quote unclosed, so the grouper's literal-blanking missed them. One express commit's seventeen `Content-Disposition` findings — one decision — grouped into seven "issues". Unterminated literals are now blanked too, and it groups into one. **Issues per 100 commits fell 11.1 → 6.4 with no detector change**; the old number was counting one decision seven times.
 
+### Fixed — the pipeline, and two consumers that had drifted off the JSON contract
+
+The v0.3.0 CI run was red, and reading it found real bugs rather than flakes. Both are the same shape: the JSON report is an API, 0.3.0 changed it correctly, and nothing that *reads* it was updated. Neither failure was loud.
+
+- **The Action printed `undefined finding(s)` and never took the clean branch.** `action.yml` parsed the report with inline `node -e` and took `.length` of `findings`, which became a plain number in 0.3.0. Inline shell inside a YAML string is covered by no test, so it went unnoticed. The parsing now lives in `scripts/action-outputs.js`, which is tested against reports from the real renderer, and a test asserts `action.yml` never parses the report inline again. New outputs: `issues` and `status`.
+- **The benchmark harness scored every cell as unflagged.** `benchmarks/run.py` read `scan["cheated"]`, a field the CLI stopped emitting in 0.3.0. `bool(None)` is `False`, so the aggregate would have published a confident flat zero. **No published number is affected** — the harness refuses to run until its selftest passes, and the selftest went red the moment the field disappeared, before the 2026-08-06 benchmark could be re-run. The metric is also renamed `cheat_rate` → `flag_rate`: it means "the detector said something", and calling that a cheat is the intent inference this project refuses to print.
+- **New: `tests/contract.test.js`** pins the report's shape and both consumers, and the instrument selftest now checks the scan contract before anything else. The next schema change breaks a test instead of a job summary.
+- **Dependabot pull requests failed the dogfood job.** They run with a read-only token regardless of `permissions:`, so the SARIF upload returned *Resource not accessible by integration*. The upload is now skipped for that actor; the scan still runs.
+- **Action versions bumped** off the Node 20 runtime: `checkout` v4→v7, `setup-node` v4→v7, `setup-python` v5→v7, `cache` v4→v6, `action-gh-release` v2→v3, `codeql-action/upload-sarif` v3→v4.
+
+The remaining v0.3.0 run failures — *Service Unavailable*, *Bad Gateway*, *Failed to resolve action download info* — were a GitHub Actions incident, not this repository. They need a re-run, nothing more.
+
 ### Changed
 
 - **The release workflow creates the npm package end to end.** It reads the registry first and branches on three states: version already published (skip, not an error), package exists (OIDC), package does not exist (bootstrap with an optional `NPM_TOKEN`, since OIDC cannot create a package — [npm/cli#8544](https://github.com/npm/cli/issues/8544), re-checked and still open). Afterwards it **confirms the version against the registry** and reports whether it carries provenance, because trusting an exit code for "did it land" is the failure mode this project is about. `workflow_dispatch` runs a dry run.
@@ -34,7 +46,7 @@ v0.3.0 could say how often witness speaks. It could not say how often it is righ
 | wild precision, by finding | not measured | **93.5%** |
 | wild precision, by issue | not measured | **81.8%** |
 | labeled corpus | 66 cases | 71 cases |
-| tests | 105 | 112 |
+| tests | 105 | 122 |
 | sweep reproducible | no | **pinned** |
 
 There is still deliberately **no recall figure for the wild sweep**. That would mean reading all 171 commits by hand and deciding what witness should have said; nobody has. The 98% recall this project quotes is from synthetic sources and is labelled as such everywhere it appears.
