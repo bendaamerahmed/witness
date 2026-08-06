@@ -91,13 +91,22 @@ jobs:
             npm config set "//registry.npmjs.org/:_authToken=$NPM_TOKEN"
           fi
 
+          # The exit status is carried past the token cleanup and re-raised at
+          # the end. Reporting the failure only through an output variable left
+          # this job green, and `release` needs: publish — so a GitHub release
+          # was cut for a version that never reached the registry. A publish
+          # that silently did nothing while the pipeline went green is the
+          # exact shape this project exists to find.
           if npm publish; then
             echo "published=true" >> "$GITHUB_OUTPUT"
+            STATUS=0
           else
-            echo "::error::npm publish failed. If this says 404 or ENEEDAUTH, the trusted publisher config is usually the cause: the workflow filename field must be release.yml, not a path."
+            echo "::error::npm publish failed. 404 or ENEEDAUTH is usually the trusted publisher config: the workflow filename field must be release.yml, not a path. E422 'Unsupported GitHub Actions source repository visibility' means the repository is private, and provenance requires a public one."
             echo "published=false" >> "$GITHUB_OUTPUT"
+            STATUS=1
           fi
           npm config delete "//registry.npmjs.org/:_authToken" || true
+          exit "$STATUS"
 
       # A publish that silently did nothing is the failure mode this whole
       # project is about, so the result is checked against the registry rather

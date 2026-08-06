@@ -41,6 +41,19 @@ test('CI never require()s a non-.js file', () => {
   assert.deepStrictEqual(bad, [], `CI require()s non-JS file(s): ${bad.join(', ')}`);
 });
 
+test('a failed npm publish fails its job rather than reporting green', () => {
+  // v0.4.0 published nothing — provenance refused a private source repo — and
+  // the job still went green, because the failure was recorded in an output
+  // variable and never re-raised. `release` needs: publish, so GitHub cut a
+  // release for a version that was not on the registry. The publish step must
+  // end on an explicit exit carrying the status.
+  const rel = read('.github/workflows/release.yml');
+  const step = rel.slice(rel.indexOf('id: publish'), rel.indexOf('Confirm it is actually on the registry'));
+  assert.ok(/published=false/.test(step), 'the publish step no longer records a failed publish');
+  assert.ok(/exit "\$STATUS"/.test(step),
+    'the publish step does not re-raise the npm publish exit status, so a failed publish leaves the job green');
+});
+
 test('every declared bin exists and is executable as a script', () => {
   const pkg = json('package.json');
   assert.ok(pkg.bin && Object.keys(pkg.bin).length, 'package.json must declare at least one bin');
