@@ -119,11 +119,17 @@ jobs:
           for i in 1 2 3 4 5 6; do
             if npm view "$PKG@$VER" version >/dev/null 2>&1; then
               echo "::notice::$PKG@$VER confirmed on the registry."
-              node -e "
-                const { execSync } = require('child_process');
-                const d = JSON.parse(execSync('npm view $PKG@$VER --json').toString());
-                console.log('provenance:', d.dist.attestations ? 'yes' : 'no (published with a token, not OIDC)');
-              " || true
+              # Ask the registry for the one field, rather than parsing the whole
+              # packument: `npm view <spec> --json` does not always return a single
+              # object, so `d.dist.attestations` threw a TypeError that `|| true`
+              # swallowed — and the provenance line never printed at all on the
+              # release that first carried provenance.
+              ATT=$(npm view "$PKG@$VER" dist.attestations.provenance.predicateType 2>/dev/null || true)
+              if [ -n "$ATT" ]; then
+                echo "::notice::provenance: yes ($ATT)"
+              else
+                echo "::warning::provenance: no attestation on $PKG@$VER (published with a token, not OIDC)"
+              fi
               exit 0
             fi
             sleep 10

@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.4.1] — 2026-08-07
+
+The first release after the repository went public, and the first audit that assumed a stranger could read and run all of this.
+
+Nothing here is research. Going public changed who the inputs come from, and two defects only mattered once that was true: the Action's inputs became something a stranger could shape, and the README became something a stranger copies.
+
+### Security
+
+- **Shell injection in `action.yml`** (`inputs.base`, `inputs.fail-on`, and the resolved base ref). Three steps interpolated `${{ }}` directly inside `run:`, where the value is pasted in as source text before a shell exists. A caller writing `base: ${{ github.event.pull_request.head.ref }}` — an ordinary line, and attacker-controlled, since git permits `;`, `$`, `` ` `` and quotes in branch names — could have run arbitrary commands on the runner. Every value now reaches bash through `env:` as a quoted variable, which is what the `Scan` step already did. A base ref containing a newline is rejected outright, because that writes extra pairs into `GITHUB_OUTPUT`.
+- `tests/packaging.test.js` fails the build if any `run:` block in `action.yml` interpolates an expression again. It reports all seven pre-fix sites and none after.
+- `SECURITY.md` says what a caller is trusted with. "Nothing leaves the runner" was a promise the injection broke.
+
+### Fixed
+
+- **Every documented `uses:` reference was broken.** README, `docs/CI.md` twice, and the release preamble all said `bendaamerahmed/witness@v0`. No `v0` ref had ever been pushed, so every copy-paste of the front-page snippet failed with *unable to resolve action* — for four releases. The moving major tag now exists, and `check-links.js` resolves every documented ref and fails when one does not exist. Links were checked; the one reference that is not a link was not.
+- **The release workflow never printed whether the publish carried provenance.** `npm view <spec> --json` does not always return a single object, so `d.dist.attestations` threw a `TypeError` that `|| true` swallowed — on the very release that first carried provenance. It now asks the registry for that one field, and warns when there is no attestation.
+- The detector source held two raw NUL bytes, used as the literal-blanking sentinel. They work, but ripgrep classifies the file as binary and refuses to search it while git's 8000-byte sniff does not, so a contributor's `grep` silently skipped the detector. Written as `\u0000` now; identical at runtime, and both precision gates are unmoved (71/71 corpus, 93.5%/81.8% wild).
+
+### Removed
+
+- `PUSH.md`, a pre-first-push personal runbook that was public and wrong in almost every particular — it stated the repository did not exist yet.
+
 ## [0.4.0] — 2026-08-06
 
 The release where the wild sweep stopped being a rate and became an accuracy.

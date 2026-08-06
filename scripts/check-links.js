@@ -3,6 +3,7 @@
 // A dead one ships as a 404 on the busiest file in the repo.
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
 
 const DOCS = ['README.md', 'CONTRIBUTING.md', 'SECURITY.md', 'docs/SPEC.md', 'docs/TELLS.md',
@@ -29,5 +30,37 @@ for (const f of ['README.md', 'package.json', '.claude-plugin/marketplace.json',
   if (f !== 'package.json' && !t.includes(OWNER)) { console.error(`${f}: does not reference ${OWNER}`); failed = true; }
 }
 
+// A documented action ref that resolves to nothing is a broken copy-paste in
+// the busiest snippet in the project. README, docs/CI.md (twice) and the release
+// preamble all said @v0 for four releases while no v0 ref had ever been pushed,
+// so every user following the front page got "unable to resolve action". Links
+// were checked; the one reference that is not a link was not.
+const REF_SOURCES = [...DOCS, '.github/RELEASE_PREAMBLE.md'];
+const refs = new Set();
+for (const doc of REF_SOURCES) {
+  const p = path.join(ROOT, doc);
+  if (!fs.existsSync(p)) continue;
+  for (const m of fs.readFileSync(p, 'utf8').matchAll(/bendaamerahmed\/witness@([A-Za-z0-9._-]+)/g)) refs.add(m[1]);
+}
+
+const git = (args) => execFileSync('git', args, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
+let canResolve = true;
+try { git(['rev-parse', '--git-dir']); } catch (e) { canResolve = false; }
+
+if (!canResolve) {
+  // Loudly, because a check that quietly does nothing is the thing this
+  // repository is about.
+  console.log(`NOT a git repository: skipped resolving ${refs.size} documented action ref(s).`);
+} else {
+  for (const ref of [...refs].sort()) {
+    try { git(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]); }
+    catch (e) {
+      console.error(`documented action ref does not exist: bendaamerahmed/witness@${ref}`);
+      console.error('  every copy-paste of that snippet fails with "unable to resolve action".');
+      failed = true;
+    }
+  }
+}
+
 if (failed) process.exit(1);
-console.log(`Links resolve across ${DOCS.length} docs; owner handle consistent.`);
+console.log(`Links resolve across ${DOCS.length} docs; owner handle consistent; ${refs.size} action ref(s) resolve.`);

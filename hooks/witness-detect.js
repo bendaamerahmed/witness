@@ -277,7 +277,7 @@ function scanPatterns(added, table, tell, after) {
 const LITERAL = /(['"])(?:\\.|(?!\1)[^\\])*\1|(?<![\w.])-?\d+(?:\.\d+)?(?![\w.])/g;
 
 function skeleton(line) {
-  return line.trim().replace(LITERAL, ' ');
+  return line.trim().replace(LITERAL, '\u0000');
 }
 
 const ASSERTIVE = /\bassert\b|\bexpect\s*\(|\bshould\b|EXPECT_|\bassertEqual\b/;
@@ -303,7 +303,7 @@ function scanMovedGoalpost(before, after, path) {
   for (const { n, text } of added) {
     if (!isAssertion(text)) continue;
     const sk = skeleton(text);
-    if (!sk.includes(' ')) continue;
+    if (!sk.includes('\u0000')) continue;
     const match = gone.find((g, i) => !usedRemoved.has(i) && isAssertion(g) && skeleton(g) === sk && g.trim() !== text.trim()
       && (usedRemoved.add(i) || true));
     if (!match) continue;

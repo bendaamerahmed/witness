@@ -34,15 +34,29 @@ The gap this release set out to close: witness could say how often it speaks, no
 - [x] Reports in `pdf`, `json`, `md`, `html`, `text`, `sarif` from every entry point, with `--version` and did-you-mean hints on every command.
 - [x] Release workflow creates the npm package end to end: detects registry state, bootstraps a brand-new package, and **confirms the publish against the registry** rather than trusting an exit code.
 
+## Done — v0.4.1: what the first public audit found
+
+Going public changed the threat model: the Action became something a stranger can run, and the README became something a stranger copies. Both had defects that only mattered once that was true. None of these were research; they were repairs.
+
+- [x] **The documented Action reference did not exist.** README, `docs/CI.md` (twice) and the release preamble all said `bendaamerahmed/witness@v0`. No `v0` ref had ever been pushed, so every copy-pasted example failed with *unable to resolve action* — for four releases. The moving major tag now exists, and `check-links.js` resolves every documented ref and fails on one that does not. Links were checked; the one reference that is not a link was not.
+- [x] **Script injection in `action.yml`.** Three `run:` blocks interpolated `${{ inputs.base }}`, `${{ steps.base.outputs.ref }}` and `${{ inputs.fail-on }}` straight into bash, where the value is pasted in as source before a shell exists. A caller passing an attacker-influenced ref — `base: ${{ github.event.pull_request.head.ref }}` is a normal-looking thing to write, and git allows `;`, `$`, `` ` `` and quotes in branch names — had arbitrary command execution on the runner. Every value now arrives through `env:` as a quoted variable, and a newline in a base ref is refused. A test reports all seven pre-fix sites and none after.
+- [x] **SECURITY.md says what a caller is trusted with.** "Nothing leaves the runner" was a promise the injection broke.
+- [x] Deleted `PUSH.md` — a pre-first-push personal runbook, public, and wrong in almost every particular.
+- [x] Replaced the raw NUL bytes in `hooks/witness-detect.js` with `\u0000` escapes. A deliberate sentinel that worked, but ripgrep classified the detector as binary and refused to search it while git's 8000-byte sniff did not. Identical at runtime; both gates unmoved.
+- [x] The release workflow reports provenance instead of crashing on it: `d.dist.attestations` threw a `TypeError` that `|| true` swallowed, on the first release that actually carried provenance.
+
 ## Next — v0.5.0: make the precision figure stand up
 
 93.5% is one rater's opinion, and the rater maintains the tool. That is the weakest load-bearing number in the project now.
+
+**Exit criterion:** the headline precision figure is reported per tell and per language with a stated interval, and no single rater can move it alone.
 
 - [ ] **Inter-rater agreement.** A second labeller on the same 31 findings, with Cohen's κ published even if it is bad. One labeller is one opinion; the labels file takes pull requests for exactly this.
 - [ ] **Per-language precision.** Every rule is language-shaped, and the sweep is Python- and JS-heavy: 27 Go commits and one Go finding is not a measurement of Go.
 - [ ] **A confusion matrix per tell**, not aggregates. `moved goalpost` is 21 of 31 findings and is carrying the headline number for all seven tells.
 - [ ] **A wild recall estimate.** Precision is the cheap half. Recall means reading commits witness said nothing about — even a hand-labelled sample of 40 would replace a blank with a range.
 - [ ] Widen the sweep past five repositories, and past the healthy-codebase bias: these were picked because anything witness says about them is probably witness's fault.
+- [ ] **An interval, not a point.** 29/31 is a small sample and 93.5% reads far more precise than it is. Publish a confidence interval next to it everywhere the number appears, so the honest width is visible.
 
 ## Then — v0.6.0: widen the science
 

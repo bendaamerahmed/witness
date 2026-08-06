@@ -41,6 +41,30 @@ test('CI never require()s a non-.js file', () => {
   assert.deepStrictEqual(bad, [], `CI require()s non-JS file(s): ${bad.join(', ')}`);
 });
 
+test('action.yml never interpolates ${{ }} inside a run: block', () => {
+  // A ${{ }} expression is substituted as source text before bash exists, so a
+  // caller passing an attacker-influenced ref — git allows ; $ ` and quotes in
+  // branch names — got arbitrary execution on the runner. Values must reach the
+  // script through env: and be read as quoted shell variables.
+  //
+  // action.yml only: it is the public interface and its inputs come from
+  // strangers. The release workflow interpolates values derived from our own
+  // package.json, which is not third-party input.
+  const lines = read('action.yml').split('\n');
+  const offenders = [];
+  let runIndent = null;
+  lines.forEach((line, i) => {
+    const start = /^(\s*)run:\s*\|/.exec(line);
+    if (start) { runIndent = start[1].length; return; }
+    if (runIndent === null) return;
+    const indent = line.search(/\S/);
+    if (indent !== -1 && indent <= runIndent) { runIndent = null; return; }
+    if (line.includes('${{')) offenders.push(`action.yml:${i + 1}: ${line.trim()}`);
+  });
+  assert.deepStrictEqual(offenders, [],
+    `shell injection: ${offenders.length} run-block line(s) interpolate an expression:\n${offenders.join('\n')}`);
+});
+
 test('a failed npm publish fails its job rather than reporting green', () => {
   // v0.4.0 published nothing — provenance refused a private source repo — and
   // the job still went green, because the failure was recorded in an output
