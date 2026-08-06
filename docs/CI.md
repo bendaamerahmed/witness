@@ -38,7 +38,7 @@ jobs:
   witness:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { fetch-depth: 0 }   # required: the scan needs the base commit
       - uses: bendaamerahmed/witness@v0
 ```

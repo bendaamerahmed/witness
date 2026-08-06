@@ -9,6 +9,7 @@
 
 [![ci](https://github.com/bendaamerahmed/witness/actions/workflows/ci.yml/badge.svg)](https://github.com/bendaamerahmed/witness/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@witness-plugin/witness?style=flat-square&color=111111)](https://www.npmjs.com/package/@witness-plugin/witness)
+[![marketplace](https://img.shields.io/badge/GitHub%20Marketplace-witness-111111?style=flat-square&logo=github)](https://github.com/marketplace/actions/witness-test-integrity-scan)
 ![signal](https://img.shields.io/badge/6.4%20issues-per%20100%20real%20commits-111111?style=flat-square)
 ![precision](https://img.shields.io/badge/precision-93.5%25%20%2895%25%20CI%2079--98%29-111111?style=flat-square)
 ![deps](https://img.shields.io/badge/dependencies-0-111111?style=flat-square)
@@ -68,6 +69,8 @@ Full anatomy of each — how it works, when it is legitimate, how it is detected
 
 ## Use it as a PR check
 
+On the [GitHub Marketplace](https://github.com/marketplace/actions/witness-test-integrity-scan). `@v0` is a moving major tag, so it follows patch and minor releases without you editing anything.
+
 ```yaml
 name: witness
 on: pull_request
@@ -76,7 +79,7 @@ jobs:
   witness:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
       - uses: bendaamerahmed/witness@v0
 ```
