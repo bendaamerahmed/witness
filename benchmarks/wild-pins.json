@@ -1,0 +1,21 @@
+{
+  "_about": [
+    "Pinned heads for the wild sweep.",
+    "",
+    "Without these the sweep means `the last 40 commits, whenever you happened to",
+    "run it`, so its numbers would drift every time upstream merged anything and",
+    "the hand-labels underneath them would silently rot. With them the sweep is a",
+    "fixed benchmark: the same 171 commits, forever, on any machine.",
+    "",
+    "Move a pin deliberately, in its own commit, and re-label what changed."
+  ],
+  "pinnedOn": "2026-08-06",
+  "commitsPerRepo": 40,
+  "heads": {
+    "requests": "1f6589ec3a1ee910f9a65cc3ceac60b26677bc0e",
+    "flask": "6a2f545bfd8ed31e19066a299296917e034aca58",
+    "got": "e3924aa1e53a6ca3eb93a43618ce532442a89b40",
+    "express": "a3714473feb3d2908add734d340e7755fd85e0a3",
+    "gin": "34dac209ffb6ef85cc78c5d217bbb7ad001d68fd"
+  }
+}

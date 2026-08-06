@@ -68,8 +68,23 @@ const SWALLOW = [
   { re: /except\s*(?:[\w.() ,]+)?\s*:\s*pass\s*$/, what: 'except: pass' },
   { re: /catch\s*(?:\([^)]*\))?\s*\{\s*\}\s*$/, what: 'catch {}' },
   { re: /\brescue\s+nil\b/, what: 'rescue nil' },
-  { re: /^\s*_\s*[,=]\s*(?:=\s*)?.*\berr\b/, what: 'discarded error' },
-  { re: /^\s*_\s*=\s*err\b/, what: '_ = err' },
+  // Go's discarded-return patterns are GONE, deliberately.
+  //
+  // The first version matched `_, err :=`, which discards the VALUE and captures
+  // the error — the most common idiom in the language. Replacing it with
+  // `value, _ :=` was worse: Go's second return is not always an error.
+  //
+  //   f,  _ := os.Open(p)                  error discarded    <- a real swallow
+  //   rv, _ = utf8.DecodeRuneInString(s)   size discarded
+  //   v,  _ := m[key]                      comma-ok
+  //   c,  _ := CreateTestContext(w)        an engine discarded
+  //
+  // A regex cannot tell these apart; it needs the function's type. On one sweep
+  // the rule produced 34 findings in gin and every one was ordinary code. The
+  // trade is one missed swallow against 34 false alarms, and in this project
+  // false positives cost more. `_ = err` survives because assigning something
+  // named `err` to the blank identifier is unambiguous.
+  { re: /^\s*_\s*=\s*[\w.]*[Ee]rr[\w.]*\s*$/, what: '_ = err' },
   { re: /\.catch\s*\(\s*\(\s*\)\s*=>\s*\{?\s*\}?\s*\)/, what: 'empty .catch()' },
   { re: /\bexcept\s*(?:[\w.() ,]+)?\s*:\s*(?:return|continue)\s*(?:None)?\s*$/, what: 'except: return' },
   { re: /\bcatch\s*\([^)]*\)\s*\{\s*(?:\/\/[^\n]*)?\s*\}/, what: 'catch with only a comment' },
@@ -267,6 +282,18 @@ function skeleton(line) {
 
 const ASSERTIVE = /\bassert\b|\bexpect\s*\(|\bshould\b|EXPECT_|\bassertEqual\b/;
 
+/**
+ * Whether a line is an assertion, judged with string literals removed.
+ *
+ * `it('should encode data uri1', ...)` is a test NAME containing the word
+ * "should". Renaming it to `it('should encode data uri', ...)` was reported as a
+ * moved goalpost on real express commits: same structure, different literal,
+ * and the word `should` sitting inside the title.
+ */
+function isAssertion(line) {
+  return ASSERTIVE.test(String(line).replace(LITERAL_TOKEN, ' '));
+}
+
 function scanMovedGoalpost(before, after, path) {
   if (!isTestPath(path)) return [];
   const gone = removedLines(before, after);
@@ -274,10 +301,10 @@ function scanMovedGoalpost(before, after, path) {
   const found = [];
   const usedRemoved = new Set();
   for (const { n, text } of added) {
-    if (!ASSERTIVE.test(text)) continue;
+    if (!isAssertion(text)) continue;
     const sk = skeleton(text);
     if (!sk.includes(' ')) continue;
-    const match = gone.find((g, i) => !usedRemoved.has(i) && skeleton(g) === sk && g.trim() !== text.trim()
+    const match = gone.find((g, i) => !usedRemoved.has(i) && isAssertion(g) && skeleton(g) === sk && g.trim() !== text.trim()
       && (usedRemoved.add(i) || true));
     if (!match) continue;
     if (justifiedAt(after, n)) continue;

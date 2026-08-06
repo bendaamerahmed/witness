@@ -9,7 +9,8 @@
 
 [![ci](https://github.com/bendaamerahmed/witness/actions/workflows/ci.yml/badge.svg)](https://github.com/bendaamerahmed/witness/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@witness-plugin/witness?style=flat-square&color=111111)](https://www.npmjs.com/package/@witness-plugin/witness)
-![signal](https://img.shields.io/badge/11%20issues-per%20100%20real%20commits-111111?style=flat-square)
+![signal](https://img.shields.io/badge/6.4%20issues-per%20100%20real%20commits-111111?style=flat-square)
+![precision](https://img.shields.io/badge/precision-93.5%25%20hand--labelled-111111?style=flat-square)
 ![deps](https://img.shields.io/badge/dependencies-0-111111?style=flat-square)
 ![hooks](https://img.shields.io/badge/hooks-advisory%20only-111111?style=flat-square)
 [![license](https://img.shields.io/badge/license-MIT-111111?style=flat-square)](LICENSE)
@@ -35,12 +36,13 @@ We found this by running a benchmark, not by theorising. Across 96 cells of an a
 
 | | |
 |---|---|
-| **11** | issues per 100 real merged commits, across 5 OSS repos it has never seen ([sweep](benchmarks/results/2026-08-06-wild-sweep.md)) |
+| **93.5%** | precision on 171 real merged commits — every finding hand-labelled, both false positives published ([sweep](benchmarks/results/2026-08-06-wild-sweep.md)) |
+| **6.4** | issues per 100 real merged commits, across 5 OSS repos it has never seen |
 | **98%** | recall on 56 real agent-modified checks from the benchmark |
 | **7** | tells detected across Python, JS/TS, Go, Rust, Ruby, Java, shell, CI config |
 | **0** | dependencies, network calls, telemetry |
 
-<sub>That first number used to be "100% precision on a labeled corpus", which was true and misleading: the corpus was written by the same person as the detector. Run against real repositories it produced <b>122 findings per 100 commits</b> — noise. Fixing that is what v0.3.0 is. The rate above is what a reviewer actually confronts; there is deliberately <b>no precision figure</b>, because nobody has labeled those commits and a rate is not an accuracy. Independent false-positive reports are the <a href=".github/ISSUE_TEMPLATE/false-positive.yml">most valuable issue you can file</a>.</sub>
+<sub>That precision figure used to read "100% on a labeled corpus", which was true and misleading: the corpus was written by the same person as the detector. Run against real repositories it produced <b>122 findings per 100 commits</b> — noise. Three rounds of fixing that is what v0.3.0 and v0.4.0 are. The number above is now one rater's verdict on 31 real findings from <a href="benchmarks/wild-pins.json">pinned</a> commits, scored by <code>npm run wild:precision</code> in CI — <b>93.5% by finding, 81.8% after grouping</b>, and <b>no recall figure in the wild</b>, because that would mean reading all 171 commits by hand and nobody has. One rater who maintains the tool is not independence. Independent false-positive reports are the <a href=".github/ISSUE_TEMPLATE/false-positive.yml">most valuable issue you can file</a>.</sub>
 
 ## Why it matters
 
@@ -187,12 +189,15 @@ Four instrument bugs were found and are documented in the write-up — three by 
 ## Development
 
 ```bash
-npm run verify      # drift, versions, links, 67 tests, precision gate
-npm run selftest    # benchmark instrument (needs python + pytest)
-npm run sync        # regenerate per-host rule copies from AGENTS.md
+npm run verify          # drift, versions, links, 112 tests, corpus precision gate
+npm run wild:clone      # ~200MB of clones, once
+npm run wild            # the pinned sweep over 171 real merged commits
+npm run wild:precision   # score that sweep against the hand-labels
+npm run selftest        # benchmark instrument (needs python + pytest)
+npm run sync            # regenerate per-host rule copies from AGENTS.md
 ```
 
-`AGENTS.md` is the one true ruleset; every per-host rule file is generated from it and CI fails on drift. The precision floor is enforced in CI and **must never be lowered to make a build green** — see [CONTRIBUTING.md](CONTRIBUTING.md).
+`AGENTS.md` is the one true ruleset; every per-host rule file is generated from it and CI fails on drift. Both precision floors are enforced in CI and **must never be lowered to make a build green** — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Contributors
 
@@ -212,6 +217,9 @@ The hook budget is enforced in [`tests/perf.test.js`](tests/perf.test.js). The r
 
 **Does it catch everything?**
 No. It catches what is visible in a diff. An agent that quietly overfits source to a fixture looks honest to every grep ever written — which is why the benchmark leans on held-out tests instead of on the detector.
+
+**How often is it wrong?**
+Two findings in 31 on the pinned sweep, and both are [written up by name](benchmarks/results/2026-08-06-wild-sweep.md) rather than tuned away — each would need the detector to see something a diff does not contain. Whether it *misses* things in the wild is unmeasured and stated as unmeasured.
 
 **Does it fight with other plugins?**
 It composes especially well with minimalism rulesets like [ponytail](https://github.com/DietrichGebert/ponytail). Ponytail governs how much code gets written; witness governs whether the green checkmark means anything. The smallest change that is *actually verified* is both goals at once.

@@ -2,6 +2,12 @@ name: release
 on:
   push:
     tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Verify and package, but do not publish or create a release'
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -14,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - uses: actions/setup-python@v5
@@ -27,32 +34,116 @@ jobs:
   publish:
     needs: verify
     runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.publish.outputs.published }}
     steps:
       - uses: actions/checkout@v4
 
-      # Trusted publishing needs Node >= 22.14.0 and npm >= 11.5.1. `setup-node`
-      # ships an npm older than that even on Node 22, so it is upgraded
-      # explicitly. No `registry-url` and no NODE_AUTH_TOKEN: this publishes over
-      # OIDC, and there is no long-lived npm token anywhere in this repository.
+      # Trusted publishing needs Node >= 22.14.0 and npm >= 11.5.1. setup-node
+      # ships an older npm even on Node 22, so it is upgraded explicitly.
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - run: npm install -g npm@latest
       - run: npm --version
 
-      - name: Publish to npm via trusted publishing
-        # First publish of a package cannot use OIDC (npm/cli#8544), so v1 is
-        # published manually and this step takes over from the second release on.
-        # continue-on-error so a registry problem never blocks the GitHub release.
-        run: npm publish
-        env:
-          NPM_CONFIG_PROVENANCE: true
-        continue-on-error: true
+      - name: What is on the registry already
+        id: state
+        run: |
+          set -uo pipefail
+          PKG=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          echo "pkg=$PKG"  >> "$GITHUB_OUTPUT"
+          echo "ver=$VER"  >> "$GITHUB_OUTPUT"
 
+          if npm view "$PKG@$VER" version >/dev/null 2>&1; then
+            echo "state=version-exists" >> "$GITHUB_OUTPUT"
+            echo "::notice::$PKG@$VER is already on the registry; publish will be skipped."
+          elif npm view "$PKG" version >/dev/null 2>&1; then
+            echo "state=package-exists" >> "$GITHUB_OUTPUT"
+          else
+            echo "state=new-package" >> "$GITHUB_OUTPUT"
+          fi
+
+      # OIDC cannot CREATE a package: a trusted publisher is configured on a
+      # package that already exists (npm/cli#8544, open). So the first publish
+      # needs a token, and only the first. NPM_TOKEN is optional and unused once
+      # the package exists — if it is absent, this step explains what to do
+      # rather than failing with a 404.
+      - name: Publish
+        id: publish
+        if: steps.state.outputs.state != 'version-exists' && !inputs.dry-run
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+        run: |
+          set -uo pipefail
+          STATE="${{ steps.state.outputs.state }}"
+          PKG="${{ steps.state.outputs.pkg }}"
+
+          if [ "$STATE" = "new-package" ]; then
+            if [ -z "${NPM_TOKEN:-}" ]; then
+              echo "::warning::$PKG does not exist on the registry yet, and OIDC cannot create it."
+              echo "::warning::Either publish once locally (npm publish --provenance=false), or add an NPM_TOKEN secret for the bootstrap."
+              echo "published=skipped-no-bootstrap" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "::notice::Bootstrapping $PKG with NPM_TOKEN. Configure the trusted publisher afterwards; later releases use OIDC."
+            npm config set "//registry.npmjs.org/:_authToken=$NPM_TOKEN"
+          fi
+
+          if npm publish; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::npm publish failed. If this says 404 or ENEEDAUTH, the trusted publisher config is usually the cause: the workflow filename field must be release.yml, not a path."
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+          npm config delete "//registry.npmjs.org/:_authToken" || true
+
+      # A publish that silently did nothing is the failure mode this whole
+      # project is about, so the result is checked against the registry rather
+      # than trusted from the exit code.
+      - name: Confirm it is actually on the registry
+        if: steps.publish.outputs.published == 'true'
+        run: |
+          set -uo pipefail
+          PKG="${{ steps.state.outputs.pkg }}"; VER="${{ steps.state.outputs.ver }}"
+          for i in 1 2 3 4 5 6; do
+            if npm view "$PKG@$VER" version >/dev/null 2>&1; then
+              echo "::notice::$PKG@$VER confirmed on the registry."
+              node -e "
+                const { execSync } = require('child_process');
+                const d = JSON.parse(execSync('npm view $PKG@$VER --json').toString());
+                console.log('provenance:', d.dist.attestations ? 'yes' : 'no (published with a token, not OIDC)');
+              " || true
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::warning::Published, but $PKG@$VER is not resolving yet. Registry propagation can lag; check manually."
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Release ${{ github.ref_name }}"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| package | \`${{ steps.state.outputs.pkg }}@${{ steps.state.outputs.ver }}\` |"
+            echo "| registry state | ${{ steps.state.outputs.state }} |"
+            echo "| published | ${{ steps.publish.outputs.published || 'skipped' }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    needs: publish
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: Package the plugin
         run: |
           zip -r "witness-${GITHUB_REF_NAME}.zip" . \
-            -x '.git/*' 'node_modules/*' 'benchmarks/runs/*'
-
+            -x '.git/*' 'node_modules/*' 'benchmarks/runs/*' 'benchmarks/.wild-repos/*'
       - name: GitHub release
         uses: softprops/action-gh-release@v2
         with:

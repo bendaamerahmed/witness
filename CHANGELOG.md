@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.4.0] — 2026-08-06
+
+The release where the wild sweep stopped being a rate and became an accuracy.
+
+v0.3.0 could say how often witness speaks. It could not say how often it is right, because nobody had read the findings. Every one of them has now been read against its actual diff, with a written verdict: **93.5% precision by finding (29/31), 81.8% by issue (9/11)** — and both false positives are published by name rather than tuned away.
+
+### Added
+
+- **`benchmarks/wild-labels.json`** — a verdict and a reason on every finding in the sweep. Pull requests disagreeing with a verdict are explicitly welcome; one rater who maintains the tool is not independence.
+- **`benchmarks/wild-pins.json`** — the sweep is pinned to exact upstream commits, so its numbers are reproducible on any machine and the labels stay attached to the findings they describe. `--head` still sweeps today's upstream, deliberately producing different numbers.
+- **`npm run wild:precision`** — scores the pinned sweep against the labels. It fails on precision below floor, on a finding nobody labelled, and on a label describing a finding that no longer occurs. The last two are what stop labels drifting away from the detector.
+- A CI job running that scorer on every pull request, with the numbers written to the run summary.
+- `node benchmarks/wild.js --write-pins`, for moving the pins deliberately.
+
+### Fixed
+
+- **A test *name* was read as an assertion.** `it('should encode data uri1')` renamed to `...uri2` was reported as a moved goalpost, because `should` appeared inside the string. Assertion detection now blanks string literals first.
+- **Go's `_, err :=` was read as a discarded error.** It is the opposite — it discards the byte count and keeps the error. The obvious repair, flagging `value, _ :=`, produced 34 findings in `gin`, every one ordinary code, because a regex cannot see whether the discarded position holds an `error`. **The rule was removed rather than repaired.** `_ = err` on its own line is still caught. A tell that needs types belongs in a type checker.
+- **Grouping under-collapsed.** Evidence is truncated for display, which cuts string literals in half and leaves the opening quote unclosed, so the grouper's literal-blanking missed them. One express commit's seventeen `Content-Disposition` findings — one decision — grouped into seven "issues". Unterminated literals are now blanked too, and it groups into one. **Issues per 100 commits fell 11.1 → 6.4 with no detector change**; the old number was counting one decision seven times.
+
+### Changed
+
+- **The release workflow creates the npm package end to end.** It reads the registry first and branches on three states: version already published (skip, not an error), package exists (OIDC), package does not exist (bootstrap with an optional `NPM_TOKEN`, since OIDC cannot create a package — [npm/cli#8544](https://github.com/npm/cli/issues/8544), re-checked and still open). Afterwards it **confirms the version against the registry** and reports whether it carries provenance, because trusting an exit code for "did it land" is the failure mode this project is about. `workflow_dispatch` runs a dry run.
+- README, TELLS, CI, PUBLISHING, ROADMAP and CONTRIBUTING rewritten against the new numbers. Every rule with a known blind spot now documents it under **What it gets wrong**, in its own section.
+
+### Numbers
+
+| | v0.3.0 | v0.4.0 |
+| --- | ---: | ---: |
+| findings per 100 real commits | 20.5 | 18.1 |
+| issues per 100 real commits | 11.1 | **6.4** |
+| wild precision, by finding | not measured | **93.5%** |
+| wild precision, by issue | not measured | **81.8%** |
+| labeled corpus | 66 cases | 71 cases |
+| tests | 105 | 112 |
+| sweep reproducible | no | **pinned** |
+
+There is still deliberately **no recall figure for the wild sweep**. That would mean reading all 171 commits by hand and deciding what witness should have said; nobody has. The 98% recall this project quotes is from synthetic sources and is labelled as such everywhere it appears.
+
 ## [0.3.0] — 2026-08-06
 
 The release where the detector met real repositories and lost.

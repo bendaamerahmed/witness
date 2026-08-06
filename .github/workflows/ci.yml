@@ -64,6 +64,52 @@ jobs:
       # fixture-fitted one. If this fails, no number this repo publishes is safe.
       - run: python benchmarks/run.py --selftest
 
+  wild:
+    name: precision on real merged commits
+    runs-on: ubuntu-latest
+    # ~200MB of clones and a few minutes of git, so it does not run on every
+    # push. It runs on anything that touches the detector, the grouper or the
+    # labels — which is every change that could move the number.
+    if: >
+      github.event_name != 'push' ||
+      contains(github.event.head_commit.message, '[wild]')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - name: Cache the pinned clones
+        uses: actions/cache@v4
+        with:
+          path: benchmarks/.wild-repos
+          # The pins file is the cache identity: re-pin, re-clone.
+          key: wild-repos-${{ hashFiles('benchmarks/wild-pins.json') }}
+
+      - run: npm run wild:clone
+
+      # Blob-filtered clones fetch lazily, and the pins are older than HEAD, so
+      # the objects the sweep needs are only guaranteed after a fetch.
+      - name: Make sure the pinned commits are present
+        run: |
+          set -euo pipefail
+          for r in requests flask got express gin; do
+            git -C "benchmarks/.wild-repos/$r" fetch --quiet origin || true
+          done
+
+      - name: Sweep and score against the hand-labels
+        run: node benchmarks/wild-precision.js --gate
+
+      - name: Publish the numbers to the run summary
+        if: always()
+        run: |
+          {
+            echo '### Precision on real merged commits'
+            echo
+            echo '```'
+            node benchmarks/wild-precision.js || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   dogfood:
     name: witness scans its own diff
     runs-on: ubuntu-latest

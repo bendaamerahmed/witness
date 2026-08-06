@@ -10,6 +10,20 @@ Run it on your pull requests with `fail-on: ''` for a few weeks and read what it
 
 When you do gate, gate on one tell first. `moved-goalpost` and `no-op-fix` are the two with the least legitimate variance.
 
+### How noisy should you expect it to be
+
+On [171 real merged commits](../benchmarks/results/2026-08-06-wild-sweep.md) from five healthy OSS projects, with the default rule set:
+
+| | |
+| --- | ---: |
+| issues per 100 commits | **6.4** — roughly one per sixteen |
+| findings per 100 commits | 18.1 |
+| precision, hand-labelled | **93.5%** by finding, 81.8% by issue |
+
+An *issue* is what you read; a *finding* is a line annotated. One express commit changed `Content-Disposition` quoting across seventeen assertion sites — seventeen findings, one decision, and the text, Markdown, HTML and PDF reports collapse it into one issue with the sites listed underneath. SARIF deliberately does not group, because GitHub annotates lines.
+
+If your repository is far noisier than this, that is worth [an issue](https://github.com/bendaamerahmed/witness/issues) — it usually means a language idiom the detector reads wrong, and those become corpus cases.
+
 ## GitHub Action
 
 ```yaml
@@ -82,7 +96,15 @@ npx @witness-plugin/witness --rules moved-goalpost,no-op-fix
 `--dir` needs no git repository at all, which is useful for comparing two
 extracted trees or a build output against its input.
 
+```bash
+npx @witness-plugin/witness --version       # which build produced a report
+```
+
 Exit codes: `0` clean or advisory-only, `1` a `--fail-on` tell was found, `2` the scanner could not run. Without `--fail-on` it can never fail your build.
+
+Unknown flags are refused with a suggestion rather than ignored — `--fromat md` says *did you mean --format* and exits `2`. A typo in a CI script that silently scans nothing is worse than a failure.
+
+Every report carries the version and the scope it ran over, so a PDF someone forwards you can be traced back to a build and a diff.
 
 ### Pre-commit
 

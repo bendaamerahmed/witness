@@ -61,6 +61,30 @@ test('genuinely different findings do not collapse', () => {
   assert.strictEqual(report.group(F).length, 2);
 });
 
+// Evidence is truncated for display, which cuts string literals in half. Before
+// this was handled, the seventeen express Content-Disposition findings — one
+// decision — grouped into SEVEN issues, because each surviving half-literal
+// still carried its own filename.
+test('findings whose evidence was truncated mid-literal still collapse', () => {
+  const files = ['downloads.js', 'res.attachment.js', 'res.download.js'];
+  const names = ['grocery.txt', 'amazing.txt', 'image.png', 'user.html', 'document.pdf'];
+  const many = names.flatMap((n, i) => files.map((f, j) => ({
+    tell: 'moved goalpost', path: `test/${f}`, line: 10 + i * 10 + j,
+    // truncated exactly as the detector truncates it: the closing quote is gone
+    evidence: `.expect('Content-Disposition', 'attachment; filename="${n}`
+      + ` -> .expect('Content-Disposition', 'attachment; filename=${n}`,
+  })));
+  const grouped = report.group(many);
+  assert.strictEqual(grouped.length, 1, 'one decision reported more than once');
+  assert.strictEqual(grouped[0].occurrences, many.length);
+});
+
+test('truncation-tolerant grouping does not merge different transformations', () => {
+  const a = { tell: 'moved goalpost', path: 'a.js', line: 1, evidence: "assert.equal(x, 'aaa -> assert.ok(x" };
+  const b = { tell: 'moved goalpost', path: 'b.js', line: 1, evidence: "assert.equal(x, 'aaa -> assert.equal(x, 'bbb" };
+  assert.strictEqual(report.group([a, b]).length, 2);
+});
+
 test('the text report names issues and sites separately when they differ', () => {
   const many = Array.from({ length: 5 }, (_, i) => ({
     tell: 'skip', path: `t${i}.js`, line: i, evidence: '.skip(',

@@ -6,6 +6,8 @@ Six of these came from the literature. The seventh, **moved goalpost**, came fro
 
 Detector source: [`hooks/witness-detect.js`](../hooks/witness-detect.js). Labeled corpus: [`benchmarks/corpus/cases.js`](../benchmarks/corpus/cases.js).
 
+**How accurate is this.** On [171 real merged commits](../benchmarks/results/2026-08-06-wild-sweep.md), hand-labelled one by one: **93.5% precision by finding, 81.8% by issue**, with both false positives named below in the sections of the rules that produced them. Recall in the wild is unmeasured and stated as unmeasured. Where a rule has a known blind spot, it says so under **What it gets wrong** rather than in a footnote.
+
 ---
 
 ## movedgoalpost
@@ -70,6 +72,8 @@ This is a changeset-scope tell. A single edit cannot assert "no source file chan
 +   assert not request_ctx._session.accessed
 ```
 
+**What it gets wrong.** A *replaced* test looks like a *softened* one. In flask, greenlet tests carrying `assert result == 42` were deleted and a new futures-based test carrying `assert result is not None` was added in the same commit; both use a variable named `result`, and after the rewrite they land close enough together to pass both the locality and shared-subject checks. Nothing was softened. Telling those two situations apart needs the detector to know a test's identity across a rewrite, which line proximity cannot provide. This is one of the two published false positives.
+
 ---
 
 ## swallow
@@ -88,6 +92,8 @@ This is a changeset-scope tell. A single edit cannot assert "no source file chan
 **When it is legitimate.** A genuinely optional operation whose failure is genuinely uninteresting. Rare, and worth a sentence.
 
 **How it is detected.** Inline patterns plus a two-line block walk, because the common Python form spans lines. A comment-only body still counts: a note is not handling.
+
+**A rule that was removed here.** Go's `_, err := f()` was briefly flagged as a discarded error. It is the opposite: it discards the byte count and *keeps* the error. The obvious repair — flag `value, _ :=` instead — produced 34 findings in `gin`, every one ordinary code, because a regex cannot see whether the discarded position holds an `error`. The rule was deleted rather than tuned. `_ = err` on its own line is still caught, because that one is decidable from the text. A tell that needs types to be right belongs in a type checker.
 
 ---
 
@@ -149,6 +155,8 @@ It stays **on in the agent hook**, where the question is different: an agent tha
 **How it is detected.** Three conditions, all necessary. The branch is against a **bare literal**; that literal is one a **test in the same changeset actually supplies**; and the edit adds only **one** such branch. A branch against a named constant is domain logic. A trivial literal like `0` or `1` is a boundary check. Several literal branches at once is a dispatch table.
 
 Without the correspondence requirement this rule produced 24 findings on 111 real commits and every one was wrong — `if (property === 'destroy')` in a proxy handler, `if (sessions.length === 0)` in an emptiness check.
+
+**What it gets wrong.** It cannot tell a test fixture from a public API value. In `got`, `if (responseType === 'text')` is a response-type dispatch — ordinary domain logic — and `'text'` appears in the tests because `responseType: 'text'` is a documented option, not because the branch was fitted to a fixture. The correspondence rule sees only that a literal in a new branch also appears in a test. This is the second of the two published false positives.
 
 **This is still the tell no diff-based detector can catch reliably.** The heuristic gets the obvious form and will miss a determined one. That limitation is why the benchmark leans on held-out tests the agent never sees, rather than on this rule.
 

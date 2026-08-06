@@ -2,7 +2,9 @@
 
 Package: **`@witness-plugin/witness`**, owned by the `witness-plugin` org.
 
-There is **no npm token in this repository**, and there should never be one. Releases after the first publish authenticate over OIDC.
+Releases authenticate over **OIDC** — GitHub Actions proves its identity to npm per run, with no stored credential. The one exception is creating a package that does not exist yet, which OIDC cannot do; the workflow handles that case explicitly rather than failing with a confusing 404.
+
+Steady state for this repository: **no npm token, ever.** Tag, push, done.
 
 ## Why there is no token
 
@@ -15,9 +17,15 @@ npm [permanently revoked all classic tokens on 9 December 2025](https://socket.d
 
 ## One-time setup
 
-### 1. First publish, from your machine
+### 1. First publish — creating the package
 
-npm cannot create a package over OIDC — a trusted publisher is configured *on an existing package*, so the first version has to come from somewhere else ([npm/cli#8544](https://github.com/npm/cli/issues/8544)).
+npm cannot **create** a package over OIDC. A trusted publisher is configured *on an existing package*, so the very first version has to authenticate some other way ([npm/cli#8544](https://github.com/npm/cli/issues/8544), still open as of this release — it is checked before each release rather than assumed).
+
+There are two ways to do it, and the workflow supports both.
+
+**Option A — from CI, with a temporary token.** Add a granular access token as the `NPM_TOKEN` secret. The workflow uses it **only when the package does not exist on the registry**, says so in the log, and ignores it forever after. Delete the secret once the trusted publisher is configured.
+
+**Option B — from your machine.** No secret ever touches the repository:
 
 ```bash
 npm --version          # needs >= 11.5.1
@@ -63,23 +71,42 @@ OIDC removes the token, not the need for account hygiene. The OpenJS Foundation'
 Every subsequent release is:
 
 ```bash
-git tag -a v0.3.0 -m "witness v0.3.0"
-git push origin v0.3.0
+git tag -a v0.4.0 -m "witness v0.4.0"
+git push origin v0.4.0
 ```
 
-The release workflow verifies, publishes over OIDC, and creates the GitHub release. No secret is involved at any point.
+The release workflow verifies, publishes over OIDC, confirms the result against the registry, and creates the GitHub release. No secret is involved at any point.
+
+To rehearse without publishing anything: **Actions → release → Run workflow**, leaving *dry-run* ticked.
 
 ## What the workflow does
 
 ```yaml
 permissions:
+  contents: write
   id-token: write        # without this npm reports a misleading 404
 ```
+
+**It verifies before it publishes.** The whole suite plus the benchmark selftest, in a separate job. `check-versions.js` asserts the tag equals the version in all five manifests, so a mistagged release cannot reach the registry.
+
+**It looks at the registry before deciding what to do.** Three states, three behaviours:
+
+| state | what happens |
+| --- | --- |
+| `version-exists` | publish skipped, noted in the summary. Re-running a tag is not an error. |
+| `package-exists` | normal OIDC publish |
+| `new-package` | bootstrap with `NPM_TOKEN` if present; otherwise skip with an explanation of the two options above, rather than a bare 404 |
+
+**It confirms the publish actually happened.** `npm view` against the registry, retried across propagation delay, and it reports whether the published version carries provenance or was bootstrapped with a token. Trusting an exit code for "did the thing land" is the exact failure mode this project exists to catch, so the release pipeline does not do it either.
+
+**It writes the outcome to the run summary** — package, version, registry state, published or skipped — so a release that quietly did nothing is visible without reading logs.
+
+Details that cause most OIDC failures:
 
 - Node 22 and `npm install -g npm@latest`, because trusted publishing needs **npm ≥ 11.5.1 and Node ≥ 22.14.0** and `setup-node` ships an older npm even on Node 22.
 - No `registry-url:` and no `NODE_AUTH_TOKEN`. Setting `registry-url` writes an `.npmrc` expecting a token and is a common cause of `ENEEDAUTH` under OIDC.
 - `NPM_CONFIG_PROVENANCE: true`. The docs say provenance is automatic under OIDC; in practice it needs asking for.
-- `npm publish` is `continue-on-error`, so a registry problem never blocks the GitHub release.
+- A publish failure is reported with the likely cause and does not block the GitHub release.
 
 ## Version discipline
 
@@ -104,3 +131,7 @@ A mistagged release cannot reach the registry. Bump all five, or none.
 **Provenance missing from the published page.** The repository must be public and `id-token: write` must be present on the job.
 
 **First publish rejected as an existing name.** Someone took it. Both `@witness-plugin/witness` and `witness-mode` were unclaimed when this was written; scoped names under an org you control cannot be taken from you.
+
+**The workflow says `skipped-no-bootstrap`.** The package does not exist on the registry and no `NPM_TOKEN` secret is set. That is the `new-package` state above — pick option A or option B.
+
+**Published, but no provenance on the package page.** The version was bootstrapped with a token rather than OIDC. Provenance appears from the next OIDC release onward; the workflow prints which path was used so this is never a guess.

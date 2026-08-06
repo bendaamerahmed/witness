@@ -1,0 +1,109 @@
+{
+  "_about": [
+    "Hand-labelled verdicts for the wild sweep — one entry per finding, keyed by",
+    "repo|sha|tell|path|line. `node benchmarks/wild-precision.js` re-runs the",
+    "pinned sweep and scores it against this file.",
+    "",
+    "verdict:",
+    "  tp  — what witness said about the diff is factually true AND worth a",
+    "        reviewer's attention",
+    "  fp  — the statement is false, or trivially not worth attention",
+    "",
+    "This produces PRECISION. It cannot produce recall: knowing what witness",
+    "MISSED would mean labelling all 171 commits by hand, not just the 31 it",
+    "spoke about. Nothing here should be read as a claim about recall in the",
+    "wild — the corpus in corpus/cases.js measures recall, and it is synthetic.",
+    "",
+    "Single rater, and the rater maintains the tool. That is a real weakness, and",
+    "a smaller one than the synthetic corpus, where the same person wrote the",
+    "cases AND the detector. Second opinions are welcome as pull requests against",
+    "this file; disagreements are the point. If you flip a verdict, say why in",
+    "`why` and leave the old reasoning in the commit message."
+  ],
+  "labelledOn": "2026-08-06",
+  "version": "0.4.0",
+  "sweep": {
+    "commitsScanned": 171,
+    "repos": ["requests", "flask", "got", "express", "gin"],
+    "rules": "scanner default (suppression excluded)",
+    "pins": "benchmarks/wild-pins.json"
+  },
+  "labels": {
+    "requests|fd628095d7|moved goalpost|tests/test_adapters.py|8": {
+      "verdict": "tp",
+      "why": "assert \"/v:h\" became assert \"//v:h\" and the test was renamed from trims_leading to handles_leading. The expected behaviour genuinely changed; saying so out loud is the whole ask."
+    },
+    "flask|06ea505ce2|softened assertion|tests/test_reqctx.py|173": {
+      "verdict": "fp",
+      "why": "The greenlet tests were DELETED (assert result == 42) and a new futures-based test was ADDED (assert result is not None). Two different tests that both happen to use a variable called result, landing close enough together after the rewrite to pass the locality and shared-subject checks. Nothing was softened. Fixing this needs the detector to tell a rewritten test from a replaced one, which line proximity cannot do."
+    },
+    "flask|d98eb69a35|moved goalpost|tests/test_cli.py|491": {
+      "verdict": "tp",
+      "why": "assert \"HEAD\" not in output became assert \"GET, HEAD, OPTIONS, POST\" not in output. A real change to what the check demands."
+    },
+    "flask|d98eb69a35|no-op fix|tests/test_cli.py|491": {
+      "verdict": "tp",
+      "why": "The statement is exactly true: only a test file changed and a check in it got weaker. Whether that is a problem is the reviewer's call, which is what an advisory asks for."
+    },
+    "flask|e82db2ca3a|moved goalpost|tests/test_cli.py|495": {
+      "verdict": "tp",
+      "why": "The same expectation moving back the other way in a later commit — which is itself the interesting part."
+    },
+    "got|1e157c43c4|swallow|source/core/options.ts|84": {
+      "verdict": "tp",
+      "why": "A literal } catch {} with an empty body."
+    },
+    "got|1e157c43c4|swallow|source/core/utils/http2-client.ts|1166": {
+      "verdict": "tp",
+      "why": "void this.pendingAgentPromise.catch(() => {}). A deliberate fire-and-forget, and still a rejection discarded silently — worth one sentence in a review."
+    },
+    "got|1e157c43c4|swallow|source/core/utils/http2-client.ts|276": {
+      "verdict": "tp",
+      "why": "An empty catch block in a new HTTP/2 client."
+    },
+    "got|1e157c43c4|swallow|test/https.ts|794": {
+      "verdict": "tp",
+      "why": "Empty catch in a test."
+    },
+    "got|1e157c43c4|swallow|test/https.ts|1191": {
+      "verdict": "tp",
+      "why": "Empty catch in a test."
+    },
+    "got|e5e645a7d6|fixture fitting|source/as-promise/index.ts|251": {
+      "verdict": "fp",
+      "why": "if (responseType === 'text') is a response-type dispatch — a fast path for text bodies, ordinary domain logic. 'text' appears in the tests because responseType: 'text' is a documented public option, not because the branch was fitted to a fixture. The correspondence rule cannot tell a public API value from a test fixture."
+    },
+    "express|ae6dd37680|skip|test/req.fresh.js|53": {
+      "verdict": "tp",
+      "why": "this.skip() behind a Node-version guard. Deliberate and self-explanatory, and still a newly disabled test, which is a thing a reviewer should see."
+    },
+    "express|ae6dd37680|skip|test/req.fresh.js|72": {
+      "verdict": "tp",
+      "why": "The second of the pair, same commit."
+    },
+    "express|59e205a57a|moved goalpost|test/acceptance/downloads.js|18": {
+      "verdict": "tp",
+      "why": "express changed when it quotes Content-Disposition filenames: filename=\"x\" became filename=x across seventeen assertion sites. Every site is a real expectation change, and all seventeen are one decision — which is why the report groups them into a single issue."
+    },
+    "express|59e205a57a|moved goalpost|test/acceptance/downloads.js|27": { "verdict": "tp", "why": "Same decision, another site." },
+    "express|59e205a57a|moved goalpost|test/res.attachment.js|34": { "verdict": "tp", "why": "Same decision, another site." },
+    "express|59e205a57a|moved goalpost|test/res.download.js|27": { "verdict": "tp", "why": "Same decision, another site." },
+    "express|59e205a57a|moved goalpost|test/res.download.js|70": { "verdict": "tp", "why": "Same decision, another site." },
+    "express|59e205a57a|moved goalpost|test/res.download.js|87": { "verdict": "tp", "why": "Same decision, another site." },
+    "express|59e205a57a|moved goalpost|test/res.download.js|116": { "verdict": "tp", "why": "Same decision, another site." },
+    "express|59e205a57a|moved goalpost|test/res.download.js|165": { "verdict": "tp", "why": "Same decision, another site. This one keeps its own group because the old value was filename=\".name\" — a leading dot, quoted differently from the rest." },
+    "express|59e205a57a|moved goalpost|test/res.download.js|262": { "verdict": "tp", "why": "Same decision, another site." },
+    "express|59e205a57a|moved goalpost|test/res.download.js|280": { "verdict": "tp", "why": "Same decision, another site." },
+    "express|59e205a57a|moved goalpost|test/res.download.js|299": { "verdict": "tp", "why": "Same decision, another site." },
+    "express|59e205a57a|moved goalpost|test/res.download.js|316": { "verdict": "tp", "why": "Same decision, another site." },
+    "express|59e205a57a|moved goalpost|test/res.download.js|370": { "verdict": "tp", "why": "Same decision, another site." },
+    "express|59e205a57a|moved goalpost|test/res.download.js|389": { "verdict": "tp", "why": "Same decision, another site." },
+    "express|59e205a57a|moved goalpost|test/res.download.js|406": { "verdict": "tp", "why": "Same decision, another site." },
+    "express|59e205a57a|moved goalpost|test/res.download.js|429": { "verdict": "tp", "why": "Same decision, another site." },
+    "express|59e205a57a|moved goalpost|test/res.download.js|449": { "verdict": "tp", "why": "Same decision, another site." },
+    "gin|ae3f524974|moved goalpost|debug_test.go|124": {
+      "verdict": "tp",
+      "why": "The expected warning string moved from Go 1.24+ to Go 1.25+. A real change to what the check demands."
+    }
+  }
+}

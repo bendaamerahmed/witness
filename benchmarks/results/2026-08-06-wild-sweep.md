@@ -2,11 +2,21 @@
 
 The labeled corpus answers *does the detector do what I intended*. It cannot answer *what does this do to somebody else's repository*, because the same person wrote the detector and the cases.
 
-This is that second question. 171 real merged commits from five projects that have never heard of witness.
+This is that second question. 171 real merged commits from five projects that have never heard of witness: `requests`, `flask`, `got`, `express`, `gin`.
 
-## Before
+Three rounds happened in one day. All three are kept here, because the first two are how the third one got its numbers.
 
-The first sweep, on v0.2.2, produced **136 findings across 111 commits** — more than one per commit.
+| | v0.2.2 | v0.3.0 | **v0.4.0** |
+| --- | ---: | ---: | ---: |
+| commits scanned | 111 | 171 | **171** |
+| findings | 136 | 35 | **31** |
+| findings per 100 commits | 122 | 20.5 | **18.1** |
+| issues per 100 commits | — | 11.1 | **6.4** |
+| finding precision | — | — | **93.5%** (29/31) |
+| issue precision | — | — | **81.8%** (9/11) |
+| commits pinned | no | no | **yes** |
+
+## Round one — 136 findings, and what they actually were
 
 | tell | n | what it actually was |
 | --- | ---: | --- |
@@ -16,33 +26,7 @@ The first sweep, on v0.2.2, produced **136 findings across 111 commits** — mor
 | moved goalpost | 3 | real check-expectation changes |
 | softened assertion | 3 | **a bug** — the matcher paired any removed strict assertion with any added loose one anywhere in the same file |
 
-## After
-
-| | before | after |
-| --- | ---: | ---: |
-| commits scanned | 111 | 171 |
-| findings | 136 | 35 |
-| findings per 100 commits | 122 | 20.5 |
-| **issues per 100 commits** | — | **11.1** |
-
-```
-  moved goalpost         22
-  swallow                7
-  no-op fix              2
-  skip                   2
-  softened assertion     1
-  fixture fitting        1
-```
-
-| repo | language | commits | findings |
-| --- | --- | ---: | ---: |
-| requests | python | 37 | 1 |
-| flask | python | 35 | 4 |
-| got | typescript | 39 | 6 |
-| express | javascript | 33 | 21 |
-| gin | go | 27 | 3 |
-
-## What changed, and why
+More than one finding per commit. At that rate the tool gets muted in week one, however defensible each finding is on its own.
 
 **`suppression` left the default rule set.** It was 100 of 136 findings. It is a correct detector answering the wrong question on a pull request: standing debt is what `/witness-audit` is for. Still on in the agent hook, where an agent adding `# type: ignore` mid-fix is exactly the case this project exists to catch, and available anywhere via `--all`.
 
@@ -55,23 +39,61 @@ The first sweep, on v0.2.2, produced **136 findings across 111 commits** — mor
 +   assert not request_ctx._session.accessed
 ```
 
-**Findings group in the report.** One express commit changed `Content-Disposition` quoting and produced 18 individually correct `moved goalpost` findings across many test files. That is one decision to explain, not 18 problems. Text and Markdown collapse them; SARIF deliberately does not, because GitHub annotates lines.
+## Round two — reading all 35 by hand
+
+Reading every remaining finding against its actual diff found two more real bugs.
+
+**A test *name* is not an assertion.** `it('should encode data uri1')` renamed to `it('should encode data uri2')` was reported as a moved goalpost, because the word `should` appeared inside the string. Assertion detection now blanks string literals before looking for assertive verbs.
+
+**Go's second return value is not always an error.** `_, err := io.Copy(...)` was reported as a discarded error; it discards the byte count and *keeps* the error. The obvious repair — flag `value, _ :=` instead — was worse: it produced 34 findings in `gin`, every one ordinary code, because a regex cannot see whether the discarded position is an `error`. **The rule was removed rather than patched.** A tell that cannot be decided from the text of a diff does not belong in a diff scanner, and `_ = err` on its own line is still caught.
+
+That second one is in the corpus as a case whose label was deliberately *changed* to "expect nothing", with the reasoning written next to it, so a future contributor who thinks it looks like a miss finds the argument instead of just a red test.
+
+**Grouping was under-collapsing.** One express commit changed `Content-Disposition` quoting and produced 17 individually correct `moved goalpost` findings across many test files — one decision. The grouper blanks literals so identical transformations collapse, but evidence strings are *truncated for display*, which cuts a literal in half and leaves the opening quote unclosed. Seventeen findings therefore grouped into seven "issues". Unterminated literals are now blanked too, and it groups into one. Issues per 100 commits fell from 11.1 to 6.4 without a single detector change — the earlier number was counting the same decision seven times.
+
+## Round three — the actual numbers
+
+Every one of the 31 findings now carries a hand-written verdict in [`benchmarks/wild-labels.json`](../wild-labels.json), with a reason attached to each:
+
+```
+  FINDING precision  93.5%   (29/31)
+  ISSUE precision    81.8%   (9/11)
+  recall             not computable here
+```
+
+**The two false positives, in the open:**
+
+*flask `tests/test_reqctx.py:173` — softened assertion.* The greenlet tests were **deleted** (`assert result == 42`) and a new futures-based test was **added** (`assert result is not None`). Two different tests that both happen to use a variable named `result`, landing close enough after the rewrite to satisfy both the locality and shared-subject checks. Nothing was softened. Fixing it needs the detector to tell a rewritten test from a replaced one, which line proximity cannot do.
+
+*got `source/as-promise/index.ts:251` — fixture fitting.* `if (responseType === 'text')` is a response-type dispatch, ordinary domain logic. `'text'` appears in the tests because `responseType: 'text'` is a documented public option, not because the branch was fitted to a fixture. The correspondence rule cannot tell a public API value from a test fixture.
+
+Both are recorded rather than tuned away. Each one is a rule that would need to see something a diff does not contain.
+
+**Why issue precision is lower than finding precision, and why that is expected.** The true positives cluster — seventeen sites, one decision — while the false positives are singletons. Grouping compresses the wins harder than the losses. Both numbers are published for exactly that reason; quoting only the flattering one would be the thing this project is about.
 
 ## Honest reading
 
-There is **no precision number here** and there cannot be: nobody has labeled these commits, and no ground truth exists for "was this change a cheat". A rate is not an accuracy.
+**There is no recall number here, and there cannot be one without more work.** Recall in the wild would mean reading all 171 commits by hand and deciding what witness *should* have said. Nobody has done that. The 98% recall figure this project quotes comes from the labeled corpus and from the benchmark's agent-modified checks — both synthetic, both written by the same person as the detector. Anyone quoting a wild recall number for a tool in this space, this one included, is guessing.
 
-What the rate does say is whether the tool is survivable. At 122 findings per 100 commits it was noise and would have been muted in week one. At 11.1 issues per 100 commits — roughly one per nine commits — it is something a reviewer can actually read.
+**One rater, and the rater maintains the tool.** That is a real weakness. It is a smaller one than the synthetic corpus, where the same person wrote the cases *and* the detector, but it is not independence. Second opinions belong as pull requests against the labels file; disagreements are the point, and a flipped verdict is a good commit.
 
-`moved goalpost` is 22 of 35 findings, and by hand every one is a genuine change to what a check expects. That is the tell this project contributed, and it is behaving.
+**The rate still matters more than the precision.** At 122 findings per 100 commits the tool was noise regardless of how defensible each finding was. At 6.4 issues per 100 commits — roughly one per sixteen commits — it is something a reviewer can actually read. Precision only becomes an interesting question once the volume is survivable.
+
+`moved goalpost` is 21 of 31 findings, and every one is a genuine change to what a check expects. That is the tell this project contributed, and it is behaving.
 
 ## Reproduce
 
+The sweep is **pinned**. [`benchmarks/wild-pins.json`](../wild-pins.json) records the exact upstream commit each repository is swept from, so these numbers are the same on any machine on any day — and the hand-labels stay attached to the findings they were written about.
+
 ```bash
-node benchmarks/wild.js --clone
-node benchmarks/wild.js --commits 40
-node benchmarks/wild.js --commits 40 --sample 15   # findings to judge by hand
-node benchmarks/wild.js --all                      # including suppression
+npm run wild:clone                      # ~200MB of blob-filtered clones
+npm run wild                            # the pinned sweep
+npm run wild:precision                  # score it against the hand-labels
+node benchmarks/wild.js --sample 15     # findings to judge yourself
+node benchmarks/wild.js --all           # including suppression
+node benchmarks/wild.js --head          # what upstream looks like today
 ```
 
-The repositories are cloned, never vendored, so this measures whatever their history looks like when you run it. Expect the numbers to drift.
+`--head` deliberately produces different numbers: it sweeps whatever has been merged since the pin, which is useful for finding new failure modes and useless for comparison. Moving a pin is its own commit, and whatever it changes gets re-labelled.
+
+CI runs the scorer on every pull request and fails on three things: precision below its floor, a finding with no verdict, or a verdict describing a finding that no longer occurs. The last two matter most — they are what stops the labels quietly drifting away from the detector.

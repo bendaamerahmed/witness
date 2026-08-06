@@ -4,19 +4,27 @@
  * The wild sweep.
  *
  *   node benchmarks/wild.js --clone         fetch the corpus repositories
- *   node benchmarks/wild.js                 sweep and report
+ *   node benchmarks/wild.js                 sweep the pinned commits and report
+ *   node benchmarks/wild.js --head          sweep whatever upstream is at today
  *   node benchmarks/wild.js --json          machine-readable
  *   node benchmarks/wild.js --sample 12     print a sample of findings to judge
+ *   node benchmarks/wild.js --write-pins    re-pin to the current clones
+ *
+ * By default it sweeps PINNED commits (`wild-pins.json`), so the numbers below
+ * are reproducible and the hand-labels in `wild-labels.json` stay attached to
+ * the findings they were written about. `--head` answers a different question:
+ * what does this say about code merged since the pin.
  *
  * The labeled corpus in `corpus/cases.js` answers "does the detector do what I
  * intended". It cannot answer "what does this do to somebody else's repository",
  * because the same person wrote the detector and the cases.
  *
  * This runs the detector over real merged commits from real projects that have
- * never heard of it. It has no ground truth, so it produces no precision number.
- * What it produces is a RATE — findings per 100 commits — and that rate is the
- * honest headline, because a tool that fires on every commit gets muted no
- * matter how defensible each individual finding is.
+ * never heard of it. What it produces is a RATE — findings per 100 commits —
+ * because a tool that fires on every commit gets muted no matter how defensible
+ * each individual finding is. Whether those findings are TRUE is a separate
+ * question, answered by hand in `wild-labels.json` and scored by
+ * `wild-precision.js`.
  *
  * The first run of this sweep, before the v0.3.0 detector fixes, found 136
  * findings across 111 commits. That number is why suppression left the default
@@ -68,11 +76,40 @@ function clone() {
   }
 }
 
-function sweepRepo(repo, n, rules) {
+const PINS_FILE = path.join(__dirname, 'wild-pins.json');
+
+function readPins() {
+  try { return JSON.parse(fs.readFileSync(PINS_FILE, 'utf8')); }
+  catch (e) { return { heads: {}, commitsPerRepo: 40 }; }
+}
+
+function writePins() {
+  const pins = readPins();
+  for (const r of REPOS) {
+    const cwd = path.join(ROOT, r.name);
+    if (!fs.existsSync(cwd)) { console.log(`  skip  ${r.name} (not cloned)`); continue; }
+    pins.heads[r.name] = git(['rev-parse', 'HEAD'], cwd).trim();
+    console.log(`  pin   ${r.name} ${pins.heads[r.name]}`);
+  }
+  fs.writeFileSync(PINS_FILE, `${JSON.stringify(pins, null, 2)}\n`);
+  console.log(`\nWrote ${path.relative(process.cwd(), PINS_FILE)}. Re-label anything that moved.`);
+}
+
+function sweepRepo(repo, n, rules, pin) {
   const cwd = path.join(ROOT, repo.name);
   if (!fs.existsSync(cwd)) return null;
+  // A pin that the clone does not contain is a hard error rather than a silent
+  // fall back to HEAD: quietly sweeping different commits than the labels
+  // describe is exactly the class of failure this project exists to catch.
+  if (pin) {
+    try { git(['cat-file', '-e', `${pin}^{commit}`], cwd); }
+    catch (e) {
+      throw new Error(`${repo.name}: pinned commit ${pin.slice(0, 10)} is not in the clone. `
+        + 'Run `git -C benchmarks/.wild-repos/' + repo.name + ' fetch --all` or re-clone.');
+    }
+  }
   let shas;
-  try { shas = git(['log', '--no-merges', '--format=%H', '-n', String(n)], cwd).trim().split('\n').filter(Boolean); }
+  try { shas = git(['log', '--no-merges', '--format=%H', '-n', String(n), pin || 'HEAD'], cwd).trim().split('\n').filter(Boolean); }
   catch (e) { return null; }
 
   const findings = [];
@@ -103,8 +140,11 @@ function sweepRepo(repo, n, rules) {
 function main() {
   const argv = process.argv.slice(2);
   if (argv.includes('--clone')) { clone(); return; }
+  if (argv.includes('--write-pins')) { writePins(); return; }
 
-  const n = parseInt((argv[argv.indexOf('--commits') + 1] || '40'), 10) || 40;
+  const pins = readPins();
+  const pinned = !argv.includes('--head');
+  const n = parseInt((argv[argv.indexOf('--commits') + 1] || String(pins.commitsPerRepo || 40)), 10) || 40;
   const rules = argv.includes('--all') ? ALL_TELLS.slice() : SCANNER_DEFAULT.slice();
   const sampleIdx = argv.indexOf('--sample');
   const sampleN = sampleIdx >= 0 ? parseInt(argv[sampleIdx + 1] || '10', 10) : 0;
@@ -114,7 +154,7 @@ function main() {
     process.exit(2);
   }
 
-  const results = REPOS.map((r) => sweepRepo(r, n, rules)).filter(Boolean);
+  const results = REPOS.map((r) => sweepRepo(r, n, rules, pinned ? pins.heads[r.name] : null)).filter(Boolean);
   if (!results.length) { console.error('No repositories available. Run --clone first.'); process.exit(2); }
 
   const scanned = results.reduce((a, r) => a + r.scanned, 0);
@@ -130,6 +170,7 @@ function main() {
 
   if (argv.includes('--json')) {
     console.log(JSON.stringify({
+      pinned, pins: pinned ? pins.heads : null,
       commitsScanned: scanned, findings: all.length, issues,
       per100Commits: Number(rate.toFixed(1)), issuesPer100Commits: Number(issueRate.toFixed(1)),
       rules, byTell, byRepo: results.map((r) => ({ repo: r.repo, lang: r.lang, scanned: r.scanned, findings: r.findings.length })),
@@ -139,6 +180,7 @@ function main() {
   }
 
   console.log('witness — wild sweep over real merged commits\n');
+  console.log(`  commits         ${pinned ? `pinned (${pins.pinnedOn || 'see wild-pins.json'})` : 'upstream HEAD, not reproducible'}`);
   console.log(`  rule set        ${rules.length === ALL_TELLS.length ? 'all' : 'scanner default'} (${rules.length} tells)`);
   console.log(`  commits scanned ${scanned}`);
   console.log(`  findings        ${all.length}  (${rate.toFixed(1)} per 100 commits)`);
@@ -169,10 +211,11 @@ function main() {
     console.log();
   }
 
-  console.log('  There is no ground truth here, so there is no precision number. The rate is');
-  console.log('  the point: a detector that fires on every commit gets muted, however');
-  console.log('  defensible each finding is on its own.');
+  console.log('  The rate is half the story: a detector that fires on every commit gets muted,');
+  console.log('  however defensible each finding is on its own. For the other half — whether');
+  console.log('  the findings are TRUE — every one of these is hand-labelled:');
+  console.log('    node benchmarks/wild-precision.js');
 }
 
 if (require.main === module) main();
-module.exports = { sweepRepo, REPOS, ROOT };
+module.exports = { sweepRepo, readPins, REPOS, ROOT, PINS_FILE };

@@ -500,4 +500,59 @@ c('wild-true-fixture-fitting', {
   before: '', after: '',
 });
 
+// ---------------------------------------------------------------------------
+// Round two from the wild. Found by hand-labelling the v0.3.0 sweep — reading
+// the actual diff behind every finding rather than trusting the aggregate.
+// ---------------------------------------------------------------------------
+
+c('wild-express-renamed-test', {
+  path: 'test/res.location.js', expect: [],
+  note: 'express 9c85a25c02 — renaming a test. The word "should" lives inside the '
+      + 'test NAME, so the line looked like an assertion with a changed literal.',
+  before: "    it('should encode data uri1', function (done) {\n      var app = express()\n    })\n",
+  after: "    it('should encode data uri', function (done) {\n      var app = express()\n    })\n",
+});
+
+c('wild-go-discards-value-not-error', {
+  path: 'context_test.go', expect: [],
+  note: 'gin d9307dbcbb — in Go the error is the LAST return, so `_, err :=` '
+      + 'discards the value and CAPTURES the error. It is the most common idiom '
+      + 'in the language and was reported as a swallowed error.',
+  before: 'func TestUpload(t *testing.T) {\n}\n',
+  after: 'func TestUpload(t *testing.T) {\n\tw, err := mw.CreateFormFile("file", "x")\n'
+       + '\trequire.NoError(t, err)\n\t_, err = io.Copy(w, src)\n\trequire.NoError(t, err)\n}\n',
+});
+
+// LABEL CHANGED, deliberately, from ['swallow'] to []. `f, _ := os.Open(p)`
+// genuinely does discard an error and witness genuinely no longer reports it.
+//
+// The rule that caught it was `value, _ :=`, which assumes Go's second return is
+// an error. It is not: utf8.DecodeRuneInString returns a size, a map index
+// returns comma-ok, gin's CreateTestContext returns an engine. A regex cannot
+// see the type. On one sweep the rule produced 34 findings in gin and every one
+// was ordinary code.
+//
+// One missed swallow against 34 false alarms. This project trades toward
+// silence, and the miss is recorded here rather than hidden.
+c('wild-go-value-underscore-is-not-decidable', {
+  path: 'main.go', expect: [],
+  note: 'a known and accepted miss — see the comment above',
+  before: 'func run() {\n}\n',
+  after: 'func run() {\n\tf, _ := os.Open("/etc/passwd")\n\tdefer f.Close()\n}\n',
+});
+
+c('wild-go-blank-assigned-error-still-fires', {
+  path: 'main.go', expect: ['swallow'],
+  note: 'assigning something named err to the blank identifier is unambiguous',
+  before: 'func run() {\n\terr := doThing()\n\treturn err\n}\n',
+  after: 'func run() {\n\terr := doThing()\n\t_ = err\n}\n',
+});
+
+c('wild-js-real-assertion-still-fires', {
+  path: 'test/fmt.test.js', expect: ['moved goalpost'],
+  note: 'the guard against test-name matches must not silence real assertions',
+  before: "it('formats', () => {\n  expect(fmt(1000)).toEqual('1,000');\n});\n",
+  after: "it('formats', () => {\n  expect(fmt(100)).toEqual('100');\n});\n",
+});
+
 module.exports = { cases };
