@@ -103,14 +103,22 @@ One file, no dependencies, no network. Exit `0` unless you asked for a gate.
 
 Witness also ships as an agent plugin: the same detector runs on every edit as an advisory, plus a ruleset that asks for evidence before a completion claim.
 
-**Claude Code** — two separate prompts, it will not work as one:
+**Claude Code** — the interactive menu is the path the docs recommend:
+
+```
+/plugin
+```
+
+Marketplaces → Add marketplace → `bendaamerahmed/witness`, then Discover → witness → Install.
+
+Or by command:
 
 ```
 /plugin marketplace add bendaamerahmed/witness
-```
-```
 /plugin install witness@witness
 ```
+
+Adding the marketplace registers the catalogue; installing pulls the plugin out of it. `witness@witness` is `plugin-name@marketplace-name` — both come from [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json).
 
 **Codex · Copilot CLI · Gemini CLI · OpenCode · Qoder** — clone and point the host at the repo; each ships its own manifest.
 

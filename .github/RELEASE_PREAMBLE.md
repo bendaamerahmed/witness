@@ -1,11 +1,11 @@
-Install into Claude Code (two separate prompts — it will not work as one):
+Install into Claude Code:
 
 ```
 /plugin marketplace add bendaamerahmed/witness
-```
-```
 /plugin install witness@witness
 ```
+
+Or run `/plugin` for the interactive menu.
 
 Or add the PR check:
 
