@@ -1,0 +1,6 @@
+{
+  "name": "witness",
+  "version": "0.1.0",
+  "description": "Proof-of-work mode. Reproduce the failure, fix the code under test, prove it with the same unmodified check.",
+  "contextFileName": "AGENTS.md"
+}

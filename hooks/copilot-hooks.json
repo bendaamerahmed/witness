@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "node \"${PLUGIN_ROOT}/hooks/witness-activate.js\"",
+        "powershell": "node \"$env:PLUGIN_ROOT\\hooks\\witness-activate.js\"",
+        "timeoutSec": 5
+      }
+    ],
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "bash": "node \"${PLUGIN_ROOT}/hooks/witness-mode-tracker.js\"",
+        "powershell": "node \"$env:PLUGIN_ROOT\\hooks\\witness-mode-tracker.js\"",
+        "timeoutSec": 5
+      }
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "witness",
+  "description": "Proof-of-work mode for AI agents. A green check is not evidence. It is a claim.",
+  "owner": {
+    "name": "Ahmed Ben Daamer",
+    "url": "https://github.com/ahmedbendaamer"
+  },
+  "plugins": [
+    {
+      "name": "witness",
+      "description": "Reproduce, fix the code under test, prove it with the same unmodified check. Catches softened assertions, suppressions, skips, swallowed errors, no-op fixes and fixture fitting.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

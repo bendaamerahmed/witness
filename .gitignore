@@ -1,0 +1,7 @@
+node_modules/
+benchmarks/runs/
+benchmarks/results/*.json
+.env
+__pycache__/
+*.pyc
+.DS_Store
