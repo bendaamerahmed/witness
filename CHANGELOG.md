@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.2] — 2026-08-07
+
+The storefront caught up with the product, and the manifest that ships this thing is finally gated like everything else in it.
+
+### Fixed
+
+- **The plugin description said six tells. There are seven.** `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` both said "catches the six ways a green check lies" — copy written before the seventh tell existed, and carried through the release that added it. Every other surface in the repository already said seven: README, `AGENTS.md`, all six agent rule files, all seven skills, and the CLI.
+- **`moved goalpost` was missing from the marketplace description entirely.** It is 21 of 31 findings in the wild sweep, the tell carrying the headline precision number, and the one the README's central finding is about — 88% of every cheat observed in the benchmark, which the six-tell detector caught none of. It was the one absent from the sentence people read before installing.
+- Two tests now hold this in place: one asserts every manifest stating a count states `ALL_TELLS.length`, the other asserts any manifest that enumerates the tells names all of them. Both fail against the v0.4.1 manifests — four failures — and pass now. Each also fails if it ever stops finding a manifest to check, so they cannot quietly become no-ops.
+
+### Added
+
+- **`claude plugin validate ./ --strict` runs in CI.** It reads `marketplace.json` and every `plugin.json` the entries point at, so a misspelled field or a wrong type fails the build rather than somebody's install. Verified it genuinely inspects the plugin manifest and not just the marketplace wrapper: given `keywords` as a string it reports *expected array, received string*. It needs no credentials.
+- `homepage`, `repository`, `license` and `keywords` on `.claude-plugin/plugin.json`. The Codex and GitHub manifests already carried all four; the Claude manifest, for the ecosystem this plugin actually targets, was the thinnest of the four.
+
 ## [0.4.1] — 2026-08-07
 
 The first release after the repository went public, and the first audit that assumed a stranger could read and run all of this.

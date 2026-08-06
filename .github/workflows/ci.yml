@@ -53,6 +53,20 @@ jobs:
             console.log('all', r.FORMATS.length, 'formats render');
           "
 
+  plugin:
+    name: plugin manifests validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '22' }
+      # The official validator. It reads marketplace.json and every plugin.json
+      # the entries point at, so a misspelled field or a wrong type fails here
+      # rather than on somebody's install. --strict promotes warnings to errors.
+      # It needs no credentials. Everything else in this repository is gated;
+      # the manifest that ships it was not.
+      - run: npx --yes @anthropic-ai/claude-code plugin validate ./ --strict
+
   instrument:
     name: benchmark instrument selftest
     runs-on: ubuntu-latest

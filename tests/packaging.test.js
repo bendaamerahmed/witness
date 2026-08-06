@@ -41,6 +41,43 @@ test('CI never require()s a non-.js file', () => {
   assert.deepStrictEqual(bad, [], `CI require()s non-JS file(s): ${bad.join(', ')}`);
 });
 
+const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+const MANIFESTS = ['.claude-plugin/plugin.json', '.claude-plugin/marketplace.json',
+  '.codex-plugin/plugin.json', '.github/plugin/plugin.json', 'gemini-extension.json'];
+
+test('manifest copy states the real number of tells', () => {
+  // The plugin manifests said "the six ways a green check lies" from v0.2.0 to
+  // v0.4.1, through the release that added the seventh. Storefront copy is the
+  // first sentence anybody reads, and nothing checked it against the detector.
+  const { ALL_TELLS } = require('../hooks/witness-detect');
+  const expected = NUMBER_WORDS[ALL_TELLS.length];
+  let checked = 0;
+  for (const f of MANIFESTS) {
+    const m = /the (\w+) ways a green check lies/i.exec(read(f));
+    if (!m) continue;
+    checked++;
+    assert.strictEqual(m[1].toLowerCase(), expected,
+      `${f} says "${m[1]} ways" but the detector ships ${ALL_TELLS.length} tells`);
+  }
+  assert.ok(checked > 0, 'no manifest states a tell count; this guard is now checking nothing');
+});
+
+test('a manifest that enumerates the tells names every one of them', () => {
+  // moved goalpost was missing from the marketplace description while being 21
+  // of 31 findings in the wild sweep — the tell carrying the headline number.
+  const { ALL_TELLS } = require('../hooks/witness-detect');
+  let checked = 0;
+  for (const f of MANIFESTS) {
+    const text = read(f).toLowerCase();
+    const present = ALL_TELLS.filter((t) => text.includes(t));
+    if (present.length < 4) continue;   // not an enumeration, just prose
+    checked++;
+    const missing = ALL_TELLS.filter((t) => !text.includes(t));
+    assert.deepStrictEqual(missing, [], `${f} lists the tells but omits: ${missing.join(', ')}`);
+  }
+  assert.ok(checked > 0, 'no manifest enumerates the tells; this guard is now checking nothing');
+});
+
 test('action.yml never interpolates ${{ }} inside a run: block', () => {
   // A ${{ }} expression is substituted as source text before bash exists, so a
   // caller passing an attacker-influenced ref — git allows ; $ ` and quotes in
