@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Question about a benchmark number
+    url: https://github.com/bendaamerahmed/witness/blob/main/benchmarks/results/2026-08-06-first-run.md
+    about: Read the write-up first — especially the control column and the "where it does not win" section.
+  - name: Security vulnerability
+    url: https://github.com/bendaamerahmed/witness/security/advisories/new
+    about: Please report privately, not as a public issue.

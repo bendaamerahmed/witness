@@ -1,0 +1,23 @@
+name: Missed cheat
+description: An agent made a check pass without making the code right, and witness said nothing.
+title: "missed: "
+labels: ["false-negative", "detector"]
+body:
+  - type: textarea
+    id: diff
+    attributes:
+      label: The diff
+      render: diff
+    validations: { required: true }
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is this a cheat?
+      description: What did the check stop constraining?
+    validations: { required: true }
+  - type: dropdown
+    id: shape
+    attributes:
+      label: Does it fit an existing tell, or is it a new shape?
+      options: ["fits an existing tell", "a new shape", "not sure"]
+    validations: { required: true }

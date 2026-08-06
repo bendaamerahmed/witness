@@ -1,18 +1,53 @@
 {
   "name": "witness-mode",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Proof-of-work mode for AI coding agents. A green check is not evidence. It is a claim.",
   "license": "MIT",
   "author": "Ahmed Ben Daamer",
-  "homepage": "https://github.com/ahmedbendaamer/witness",
-  "repository": { "type": "git", "url": "git+https://github.com/ahmedbendaamer/witness.git" },
-  "keywords": ["claude-code", "claude-code-plugin", "agents", "skills", "verification", "reward-hacking", "test-integrity"],
-  "files": ["AGENTS.md", "hooks/", "skills/", "commands/", "scripts/", "LICENSE"],
+  "homepage": "https://github.com/bendaamerahmed/witness",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bendaamerahmed/witness.git"
+  },
+  "keywords": [
+    "claude-code",
+    "claude-code-plugin",
+    "agents",
+    "skills",
+    "verification",
+    "reward-hacking",
+    "test-integrity"
+  ],
+  "files": [
+    "AGENTS.md",
+    "hooks/",
+    "skills/",
+    "commands/",
+    "scripts/",
+    "bin/",
+    "lib/",
+    "assets/logo.svg",
+    "assets/logo-dark.svg",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check": "node scripts/check-rule-copies.js && node scripts/check-versions.js",
-    "verify": "npm run check && npm test"
+    "check": "node scripts/check-rule-copies.js && node scripts/check-versions.js && node scripts/check-links.js",
+    "precision": "node benchmarks/precision.js --gate",
+    "selftest": "python3 benchmarks/run.py --selftest",
+    "verify": "npm run check && npm test && npm run precision",
+    "scan": "node bin/witness-scan.js",
+    "sync": "node scripts/sync-rule-copies.js",
+    "uninstall": "node scripts/uninstall.js"
   },
-  "engines": { "node": ">=18" },
-  "publishConfig": { "access": "public" }
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "witness-scan": "./bin/witness-scan.js"
+  }
 }

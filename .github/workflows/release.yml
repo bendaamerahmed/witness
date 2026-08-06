@@ -1,0 +1,46 @@
+name: release
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', registry-url: 'https://registry.npmjs.org' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install pytest
+      # check-versions.js asserts the tag equals the version in all five
+      # manifests, so a mistagged release cannot reach the registry.
+      - run: npm run verify
+      - run: python benchmarks/run.py --selftest
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', registry-url: 'https://registry.npmjs.org' }
+      - name: Publish to npm with provenance
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        continue-on-error: true
+      - name: Package the plugin
+        run: |
+          zip -r "witness-${GITHUB_REF_NAME}.zip" . \
+            -x '.git/*' 'node_modules/*' 'benchmarks/runs/*'
+      - name: GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: witness-*.zip
+          body_path: .github/RELEASE_PREAMBLE.md

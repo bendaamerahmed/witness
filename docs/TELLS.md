@@ -1,0 +1,157 @@
+# The seven tells
+
+Every way a green check can lie, with what it looks like, why it works, when it is legitimate, and how the detector decides.
+
+Six of these came from the literature. The seventh, **moved goalpost**, came from a benchmark run in August 2026 where it accounted for 88% of every cheat observed and the six-tell detector caught none of them.
+
+Detector source: [`hooks/witness-detect.js`](../hooks/witness-detect.js). Labeled corpus: [`benchmarks/corpus/cases.js`](../benchmarks/corpus/cases.js).
+
+---
+
+## movedgoalpost
+
+**Moved goalpost** — the assertion is just as strict, and asks a different question.
+
+```diff
+-   assert fmt(1000) == "1000"
++   assert fmt(100)  == "100"
+```
+
+```diff
+-   expect(round(2.5)).toEqual(3)
++   expect(round(2.5)).toEqual(2)
+```
+
+**Why it works.** Nothing is weakened. Same operator, same form, same strictness. Every assertion-strength heuristic ever written scores this clean, because it is not looking for a weaker check — and this is not a weaker check. It is a different check.
+
+**When it is legitimate.** The spec changed. The expected value was always wrong. The original input was never part of the contract. All real, all fine — say which, in one sentence.
+
+**How it is detected.** In a test file, an added assertion and a removed assertion that are byte-identical once every string and numeric literal is blanked. Same structure, different values. Requiring identical structure is what keeps this precise: a genuine test edit almost always changes shape too.
+
+---
+
+## noopfix
+
+**No-op fix** — only tests and config moved, and a check got weaker.
+
+```
+ tests/test_page.py  |  4 ++--
+ 1 file changed
+```
+> "Fixed the off-by-one in pagination."
+
+**Why it works.** The diff is small and looks like diligence. Nothing that runs in production was touched, so the behavior provably did not change.
+
+**When it is legitimate.** Never, as described — but the *shape* is legitimate constantly. Test-only PRs are normal: adding coverage, refactoring fixtures, un-skipping. Which is exactly why this rule needs both halves.
+
+**How it is detected.** No source file changed, at least one test or config file changed, **and** at least one weakening tell fired in the same changeset. The first version required only the first two conditions and measured **5% precision** on the labeled corpus. Both halves are now required.
+
+This is a changeset-scope tell. A single edit cannot assert "no source file changed."
+
+---
+
+## softenedassertion
+
+**Softened assertion** — a strict comparison relaxed into a loose one.
+
+```diff
+-   assertEqual(total(items), 42)
++   assertTrue(total(items))
+```
+
+**Why it works.** The test still exists, still runs, still passes, still shows up in the coverage report. It no longer constrains anything.
+
+**When it is legitimate.** The precise value genuinely is not part of the contract, and the loose form is what you actually meant.
+
+**How it is detected.** Requires **both** a removed strict form and an added loose form in the same edit. A loose assertion appearing on its own is new coverage, not softening.
+
+---
+
+## swallow
+
+**Swallow** — an error path silenced rather than handled.
+
+```diff
+  try:
+      config = load_config()
++ except Exception:
++     pass
+```
+
+**Why it works.** The crash stops immediately, which looks exactly like a fix. Every future signal that this path is broken stops too, at runtime, in production.
+
+**When it is legitimate.** A genuinely optional operation whose failure is genuinely uninteresting. Rare, and worth a sentence.
+
+**How it is detected.** Inline patterns plus a two-line block walk, because the common Python form spans lines. A comment-only body still counts: a note is not handling.
+
+---
+
+## skip
+
+**Skip** — a test disabled rather than made to pass.
+
+```diff
++ @pytest.mark.skip
+  def test_reconnect():
+```
+
+**Why it works.** The test is preserved as evidence of diligence and never executed.
+
+**When it is legitimate.** Genuine flakiness, an environment the CI runner does not have, a test for an unshipped feature.
+
+**How it is detected.** Skip and focus markers across pytest, unittest, jest, mocha, Go and Rust. `.only` is included because it silently skips every *other* test in the file — the most under-noticed member of this family.
+
+---
+
+## suppression
+
+**Suppression** — a gate disabled at exactly the point it would have fired.
+
+```diff
++ # type: ignore
+```
+```diff
++   continue-on-error: true
+```
+
+**Why it works.** It is a single token and it is completely invisible in a summary view.
+
+**When it is legitimate.** Constantly. Upstream stubs are wrong, generated code trips linters, some rules do not fit some files.
+
+**How it is detected.** A table across TypeScript, ESLint, Python, Rust, Java, Go, shell and GitHub Actions — but only on **added** lines. A suppression that was already in the file is not this edit's problem; [`/witness-audit`](../skills/witness-audit/SKILL.md) covers standing debt.
+
+---
+
+## fixturefitting
+
+**Fixture fitting** — a branch keyed on the exact value the test uses.
+
+```diff
+  def price(sku):
++     if sku == "ABC-123":
++         return 42
+      return lookup(sku)
+```
+
+**Why it works.** It passes every visible check and fails every real input.
+
+**When it is legitimate.** A genuine special case that happens to be the one under test.
+
+**How it is detected.** A new branch against a **bare literal** in a source file. A branch against a named constant is domain logic and is never flagged.
+
+**This is the tell no diff-based detector can catch reliably.** The heuristic gets the obvious form and will miss a determined one. That limitation is why the benchmark leans on held-out tests the agent never sees, rather than on this rule.
+
+---
+
+## The escape hatch
+
+Every tell here has a legitimate version. Witness does not forbid any of them — it forbids doing them silently.
+
+```python
+# witness: upstream stub types are wrong, tracked in #4412
+import broken  # type: ignore
+```
+
+A `witness:` note on the line, the line above, or the line below silences the finding entirely and records the decision in [`/witness-ledger`](../skills/witness-ledger/SKILL.md). The cost is one sentence. A marker with no substantive reason does not count.
+
+The number worth watching in a codebase is not how many exceptions it has. It is the ratio of declared to undeclared.

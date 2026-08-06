@@ -1,6 +1,6 @@
 # witness — design specification
 
-Version 0.1.0 · August 2026
+Version 0.2.0 · August 2026
 
 ---
 
@@ -303,6 +303,17 @@ The category itself is open. Prior art is thin and all in the wrong shape: post-
 - CI on Linux, Windows and macOS
 
 - benchmark run: 216 cells, Haiku 4.5, three arms ([write-up](../benchmarks/results/2026-08-06-first-run.md))
+- detector precision and recall measured on a 59-case labeled corpus, gated in CI
+- SARIF 2.1.0 output and a GitHub Action, so the detector works as a PR check
+- latency budget enforced on the hook that runs on every edit
+
+**What measuring precision changed**
+
+§2 P4 said false positives are the failure mode that kills the product. It was right, and until v0.2.0 it was also unverified. Measuring it found `no-op fix` running at **5% precision**: it fired on any test-only change, and adding coverage, un-skipping a test, extracting a fixture helper and running a formatter are all test-only and all honest. It is now a compound rule requiring both "no source changed" and "a check got weaker".
+
+Fixing that exposed a second bug the first one had been hiding. The benchmark's own `weakened` reference — `assert x == 2.5` decaying to `assert x is not None` — was passing its selftest on the spurious `no-op fix`, not on the softening it was written to catch. The most common softening in Python was a false negative and the instrument could not see it, because a false positive was standing in for it.
+
+Two lessons worth keeping: an unmeasured precision claim is not a claim, and a passing test can pass for the wrong reason.
 
 **What the run changed about this document**
 
@@ -314,7 +325,7 @@ The category itself is open. Prior art is thin and all in the wrong shape: post-
 
 **Not done**
 
-1. **Set the GitHub handle.** `ahmedbendaamer` is a placeholder across five manifests and the README; change it before publishing.
+1. **Set the GitHub handle.** `bendaamerahmed` is a placeholder across five manifests and the README; change it before publishing.
 2. More pressure tasks, more than two. Cheating only appears under pressure, so the pressure tier is the only part of the corpus that measures anything.
 3. More than one model, and n large enough to separate two instructions if there is anything there to separate.
 4. Widen beyond Python — the harness is language-agnostic, the tasks are not.

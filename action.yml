@@ -1,0 +1,123 @@
+name: 'Witness — test integrity scan'
+description: 'Find changes that make a check pass without making the code right. Advisory by default; uploads SARIF to GitHub code scanning.'
+author: 'Ahmed Ben Daamer'
+branding:
+  icon: 'check-square'
+  color: 'gray-dark'
+
+inputs:
+  base:
+    description: 'Base ref to diff against. Defaults to the pull request base, or the previous commit on push.'
+    required: false
+    default: ''
+  fail-on:
+    description: >
+      Comma-separated tells that should fail the job, e.g. "moved-goalpost,no-op-fix",
+      or "any". Empty means advisory only, which is the default and the recommended
+      starting point: run it for a few weeks and look at what it finds before gating on it.
+    required: false
+    default: ''
+  level:
+    description: 'SARIF level for findings: note, warning, or error.'
+    required: false
+    default: 'note'
+  upload-sarif:
+    description: 'Upload results to GitHub code scanning. Requires security-events: write.'
+    required: false
+    default: 'true'
+  sarif-file:
+    description: 'Where to write the SARIF file.'
+    required: false
+    default: 'witness.sarif'
+  comment:
+    description: 'Post a summary to the job summary page.'
+    required: false
+    default: 'true'
+
+outputs:
+  findings:
+    description: 'Number of findings.'
+    value: ${{ steps.scan.outputs.findings }}
+  tells:
+    description: 'Comma-separated list of tells found.'
+    value: ${{ steps.scan.outputs.tells }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve base ref
+      id: base
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -n "${{ inputs.base }}" ]; then
+          BASE="${{ inputs.base }}"
+        elif [ -n "${GITHUB_BASE_REF:-}" ]; then
+          BASE="origin/${GITHUB_BASE_REF}"
+        else
+          BASE="${GITHUB_SHA}^"
+        fi
+        echo "ref=${BASE}" >> "$GITHUB_OUTPUT"
+        echo "witness: diffing against ${BASE}"
+
+    - name: Scan
+      id: scan
+      shell: bash
+      env:
+        WITNESS_BASE: ${{ steps.base.outputs.ref }}
+        WITNESS_FAIL_ON: ${{ inputs.fail-on }}
+        WITNESS_LEVEL: ${{ inputs.level }}
+        WITNESS_SARIF: ${{ inputs.sarif-file }}
+      run: |
+        set -uo pipefail
+        ARGS=(--base "$WITNESS_BASE" --level "$WITNESS_LEVEL" --sarif "$WITNESS_SARIF")
+        [ -n "$WITNESS_FAIL_ON" ] && ARGS+=(--fail-on "$WITNESS_FAIL_ON")
+        node "${GITHUB_ACTION_PATH}/bin/witness-scan.js" "${ARGS[@]}"
+        SCAN_EXIT=$?
+
+        # Read the same findings back as JSON for the outputs and summary. The
+        # scan is cheap and pure, so running it twice is simpler than teaching
+        # the CLI to emit two formats at once.
+        node "${GITHUB_ACTION_PATH}/bin/witness-scan.js" --base "$WITNESS_BASE" --json > witness.json || true
+        COUNT=$(node -e "try{console.log(JSON.parse(require('fs').readFileSync('witness.json','utf8')).findings.length)}catch(e){console.log(0)}")
+        TELLS=$(node -e "try{console.log(JSON.parse(require('fs').readFileSync('witness.json','utf8')).tells.join(','))}catch(e){console.log('')}")
+        echo "findings=${COUNT}" >> "$GITHUB_OUTPUT"
+        echo "tells=${TELLS}" >> "$GITHUB_OUTPUT"
+        echo "exit=${SCAN_EXIT}" >> "$GITHUB_OUTPUT"
+        exit 0
+
+    - name: Job summary
+      if: inputs.comment == 'true'
+      shell: bash
+      run: |
+        set -uo pipefail
+        {
+          echo "### Witness — test integrity scan"
+          echo
+          if [ "${{ steps.scan.outputs.findings }}" = "0" ]; then
+            echo "No tells found in this diff."
+          else
+            echo "**${{ steps.scan.outputs.findings }} finding(s):** \`${{ steps.scan.outputs.tells }}\`"
+            echo
+            echo '```'
+            node "${GITHUB_ACTION_PATH}/bin/witness-scan.js" --base "${{ steps.base.outputs.ref }}" 2>/dev/null || true
+            echo '```'
+            echo
+            echo "Every one of these has a legitimate version. If it is the right call here, keep it and add a \`witness: <why>\` comment on or next to the line — that silences the finding and records the decision."
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Upload SARIF
+      if: inputs.upload-sarif == 'true'
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.sarif-file }}
+        category: witness
+
+    - name: Apply gate
+      shell: bash
+      run: |
+        if [ "${{ steps.scan.outputs.exit }}" != "0" ]; then
+          echo "::error::witness: findings matched fail-on (${{ inputs.fail-on }})"
+          exit 1
+        fi

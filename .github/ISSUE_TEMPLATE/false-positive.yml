@@ -1,0 +1,42 @@
+name: False positive
+description: Witness flagged a change that was correct. The most valuable report you can file.
+title: "false positive: "
+labels: ["false-positive", "detector"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        False positives outrank false negatives in this project. A missed cheat costs one cheat; a false positive costs the install.
+
+        If this holds up it becomes a case in the labeled corpus with your commit on it, and the precision floor goes up.
+  - type: dropdown
+    id: tell
+    attributes:
+      label: Which tell fired?
+      options: ["moved goalpost", "no-op fix", "softened assertion", "swallow", "skip", "suppression", "fixture fitting", "not sure"]
+    validations: { required: true }
+  - type: textarea
+    id: before
+    attributes:
+      label: Before
+      render: text
+    validations: { required: true }
+  - type: textarea
+    id: after
+    attributes:
+      label: After
+      render: text
+    validations: { required: true }
+  - type: input
+    id: path
+    attributes:
+      label: File path
+      description: Path matters — the detector treats test and source files differently.
+      placeholder: tests/test_cart.py
+    validations: { required: true }
+  - type: textarea
+    id: why
+    attributes:
+      label: Why was this change correct?
+      description: One or two sentences is plenty.
+    validations: { required: true }

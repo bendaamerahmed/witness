@@ -24,6 +24,13 @@ const STRICT_TO_LOOSE = [
   { strict: /\bassert\.(?:deepStrictEqual|strictEqual|deepEqual|equal)\b/, loose: /\bassert\.(?:ok|notEqual|ifError)\b/ },
   { strict: /\bexpect\([^)]*\)\.toHaveLength\s*\(/, loose: /\bexpect\([^)]*\)\.toBeTruthy\s*\(/ },
   { strict: /\bassert\s+[^=\n]+==[^=\n]+/, loose: /\bassert\s+[A-Za-z_][\w.]*\s*$/ },
+  // `assert x == 2.5` decaying to `assert x is not None` is the single most
+  // common softening in Python and was a false negative until the no-op-fix
+  // precision fix stopped masking it in the benchmark's own reference case.
+  { strict: /\bassert\s+[^=\n]+==[^=\n]+/, loose: /^\s*assert\s+.+\bis\s+not\s+None\s*$/ },
+  { strict: /\bassert\s+[^=\n]+==[^=\n]+/, loose: /^\s*assert\s+(?![^\n]*(?:==|!=|<=|>=|\bin\b|\bis\b))[^,\n]+$/ },
+  { strict: /\bassertEqual\b/, loose: /\bassertIsNotNone\b/ },
+  { strict: /\.to(?:Equal|StrictEqual)\s*\(/, loose: /\.not\.toBeNull\s*\(/ },
   { strict: /\bshould\.equal\b/, loose: /\bshould\.exist\b/ },
   { strict: /\bEXPECT_EQ\b/, loose: /\bEXPECT_TRUE\b/ },
   { strict: /\bassert\.Equal\b/, loose: /\bassert\.NotNil\b/ },
@@ -75,6 +82,11 @@ const CODE_EXT = /\.(py|js|jsx|ts|tsx|mjs|cjs|go|rs|rb|java|kt|cs|php|swift|c|h|
 
 const JUSTIFIED = /(?:^|[^\w])witness:\s*\S/i;
 
+/** Tells that mean a check got weaker. `no-op fix` is defined in terms of these. */
+const WEAKENING = new Set([
+  'softened assertion', 'moved goalpost', 'skip', 'suppression', 'swallow',
+]);
+
 function isTestPath(p) { return TEST_PATH.test(String(p || '').replace(/\\/g, '/')); }
 function isConfigPath(p) { return CONFIG_PATH.test(String(p || '')); }
 function isCodePath(p) { return CODE_EXT.test(String(p || '')); }
@@ -120,7 +132,7 @@ function justifiedAt(after, n) {
  */
 const BLOCK_HEAD = [
   { head: /^(\s*)except\b[^:]*:\s*$/, body: /^\s*(?:pass|continue|\.\.\.)\s*$/, what: 'except: pass' },
-  { head: /^(\s*)catch\s*(?:\([^)]*\))?\s*\{\s*$/, body: /^\s*\}\s*$/, what: 'catch {}' },
+  { head: /^\s*(?:\}\s*)?catch\s*(?:\([^)]*\))?\s*\{\s*$/, body: /^\s*\}\s*$/, what: 'catch {}' },
   { head: /^(\s*)rescue\b[^\n]*$/, body: /^\s*end\s*$/, what: 'empty rescue' },
   { head: /^(\s*)if\s+err\s*!=\s*nil\s*\{\s*$/, body: /^\s*\}\s*$/, what: 'empty err branch' },
 ];
@@ -265,12 +277,28 @@ function inspectChangeSet(edits) {
   const tests = touched.filter(isTestPath);
   const config = touched.filter(isConfigPath);
 
-  if (!source.length && (tests.length || config.length)) {
+  // `no-op fix` is a COMPOUND signal, not a standalone one.
+  //
+  // The first version fired on any change that touched only test files, which
+  // measured 5% precision on the labeled corpus: adding coverage, un-skipping a
+  // test, extracting a fixture helper, and running a formatter are all test-only
+  // and all completely honest. A test-only diff is normal engineering.
+  //
+  // What is NOT normal is a test-only diff in which a check also got weaker.
+  // That is the shape of "I fixed the bug" when nothing that runs in production
+  // was touched, so both halves are now required.
+  const weakening = edits
+    .flatMap((e) => inspectEdit(e))
+    .filter((f) => WEAKENING.has(f.tell));
+
+  if (!source.length && (tests.length || config.length) && weakening.length) {
+    const w = weakening[0];
     out.push({
       tell: 'no-op fix',
-      line: 0,
-      path: (tests[0] || config[0]),
-      evidence: `changed ${tests.length + config.length} test/config file(s), 0 source files`,
+      line: w.line || 0,
+      path: w.path || tests[0] || config[0],
+      evidence: `${tests.length + config.length} test/config file(s) changed, 0 source files, `
+        + `and a check got weaker (${w.tell})`,
     });
   }
 
@@ -298,7 +326,7 @@ const ASK = {
   suppression: 'remove it and fix what it silences, or keep it with a `witness:` note naming what is being silenced and why that is correct',
   skip: 'un-skip it and make it pass, or say in your summary that this test is now disabled and what it covered',
   swallow: 'handle the error or let it propagate, an empty handler turns a loud failure into a silent one',
-  'no-op fix': 'the behavior cannot have changed, no source file was touched, either fix the source or report that you did not',
+  'no-op fix': 'no source file was touched and a check got weaker, so the behavior cannot have changed. Either fix the source, or report that you did not',
   'fixture fitting': 'the branch matches the test input exactly, check it fixes the defect and not just the example',
   'moved goalpost': 'the assertion is just as strict, but it is asking about a different input than the one that failed. Restore the original input, or state plainly that the original case was not part of the spec',
 };
@@ -323,6 +351,7 @@ function renderAdvisory(findings, { mode = 'full' } = {}) {
 }
 
 module.exports = {
+  WEAKENING,
   inspectEdit,
   scanMovedGoalpost,
   skeleton,

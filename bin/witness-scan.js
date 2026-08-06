@@ -8,7 +8,13 @@
  *   witness-scan --staged             scan the index
  *   witness-scan --base main          scan a branch against its merge base
  *   witness-scan --json               machine-readable
+ *   witness-scan --sarif [out.sarif]  SARIF 2.1.0 for GitHub code scanning
  *   witness-scan --dir a --dir b      compare two directory trees
+ *   witness-scan --fail-on <tell,..>  exit 1 if any of these tells is present
+ *
+ * Exit codes: 0 clean or advisory-only, 1 a --fail-on tell was found, 2 the
+ * scanner itself could not run. A team that has not opted into --fail-on can
+ * never have its build broken by this tool.
  */
 const { execFileSync } = require('child_process');
 const fs = require('fs');
@@ -20,15 +26,23 @@ function git(args, cwd) {
 }
 
 function parseArgs(argv) {
-  const opt = { staged: false, base: null, json: false, cwd: process.cwd(), dirs: [] };
+  const opt = { staged: false, base: null, json: false, sarif: null, failOn: [],
+                level: 'note', cwd: process.cwd(), dirs: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--staged') opt.staged = true;
     else if (a === '--json') opt.json = true;
+    else if (a === '--sarif') {
+      const next = argv[i + 1];
+      opt.sarif = next && !next.startsWith('--') ? argv[++i] : '-';
+    } else if (a === '--fail-on') {
+      opt.failOn = String(argv[++i] || '').split(',').map((s) => s.trim().replace(/-/g, ' ')).filter(Boolean);
+    } else if (a === '--level') opt.level = argv[++i];
     else if (a === '--base') opt.base = argv[++i];
     else if (a === '--cwd') opt.cwd = argv[++i];
     else if (a === '--dir') opt.dirs.push(argv[++i]);
   }
+  if (opt.failOn.includes('any')) opt.failOn = RANK.slice();
   return opt;
 }
 
@@ -94,6 +108,18 @@ function main() {
     ...inspectChangeSet(edits.filter((e) => isCodePath(e.path) || /\.(ya?ml|toml|json|cfg|ini)$/i.test(e.path))),
   ].sort((x, y) => RANK.indexOf(x.tell) - RANK.indexOf(y.tell));
 
+  if (opt.sarif) {
+    const { toSarif } = require('../lib/sarif');
+    const doc = JSON.stringify(toSarif(findings, { level: opt.level }), null, 2);
+    if (opt.sarif === '-') process.stdout.write(doc + '\n');
+    else {
+      fs.mkdirSync(path.dirname(path.resolve(opt.sarif)), { recursive: true });
+      fs.writeFileSync(opt.sarif, doc);
+      process.stderr.write(`witness: wrote ${findings.length} finding(s) to ${opt.sarif}\n`);
+    }
+    process.exit(gateExit(findings, opt));
+  }
+
   if (opt.json) {
     process.stdout.write(JSON.stringify({
       files: edits.length,
@@ -101,7 +127,7 @@ function main() {
       tells: [...new Set(findings.map((f) => f.tell))],
       cheated: findings.length > 0,
     }, null, 2) + '\n');
-    return;
+    process.exit(gateExit(findings, opt));
   }
 
   if (!findings.length) {
@@ -114,7 +140,21 @@ function main() {
     process.stdout.write(`${where}  ${f.tell}  ${f.evidence}\n              -> ${ASK[f.tell]}\n`);
   }
   process.stdout.write(`\n${findings.length} finding(s) across ${edits.length} changed file(s).\n`);
+  process.exit(gateExit(findings, opt));
+}
+
+/**
+ * Advisory by default, everywhere. A finding only fails a build when the team
+ * explicitly named that tell in --fail-on, and never otherwise.
+ */
+function gateExit(findings, opt) {
+  if (!opt.failOn.length) return 0;
+  const hit = findings.filter((f) => opt.failOn.includes(f.tell));
+  if (!hit.length) return 0;
+  process.stderr.write(`witness: failing on ${hit.length} finding(s): `
+    + `${[...new Set(hit.map((f) => f.tell))].join(', ')}\n`);
+  return 1;
 }
 
 if (require.main === module) main();
-module.exports = { editsFromGit, editsFromDirs, parseArgs, RANK };
+module.exports = { editsFromGit, editsFromDirs, parseArgs, gateExit, RANK };

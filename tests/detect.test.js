@@ -106,17 +106,29 @@ test('swallowed errors are caught', () => {
   }
 });
 
-test('no-op fix fires when only tests and config change', () => {
+// `no-op fix` is compound: test-only AND a check got weaker. The first version
+// fired on test-only alone and measured 5% precision on the labeled corpus,
+// because adding coverage and running a formatter are both test-only and both
+// completely honest.
+test('no-op fix fires when only tests changed AND a check got weaker', () => {
   const found = inspectChangeSet([
-    { path: 'tests/test_cart.py', before: 'a', after: 'b' },
+    { path: 'tests/test_cart.py', before: 'def t():\n    assertEqual(x, 42)\n', after: 'def t():\n    assertTrue(x)\n' },
     { path: '.github/workflows/ci.yml', before: 'a', after: 'b' },
   ]);
   assert.deepStrictEqual(tells(found), ['no-op fix']);
 });
 
+test('no-op fix does NOT fire on a test-only change that weakens nothing', () => {
+  const found = inspectChangeSet([
+    { path: 'tests/test_cart.py', before: 'def t():\n    assert f(1) == 2\n',
+      after: 'def t():\n    assert f(1) == 2\n\ndef t2():\n    assert f(2) == 3\n' },
+  ]);
+  assert.deepStrictEqual(tells(found), [], 'adding coverage is normal engineering');
+});
+
 test('no-op fix does not fire when a source file changed too', () => {
   const found = inspectChangeSet([
-    { path: 'tests/test_cart.py', before: 'a', after: 'b' },
+    { path: 'tests/test_cart.py', before: 'def t():\n    assertEqual(x, 42)\n', after: 'def t():\n    assertTrue(x)\n' },
     { path: 'src/cart.py', before: 'a', after: 'b' },
   ]);
   assert.deepStrictEqual(tells(found), []);

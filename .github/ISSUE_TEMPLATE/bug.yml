@@ -1,0 +1,28 @@
+name: Bug
+description: Something is broken — a hook, the CLI, the Action, or the benchmark.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: ["hook (in-session)", "witness-scan CLI", "GitHub Action", "benchmark harness", "docs", "other"]
+    validations: { required: true }
+  - type: input
+    id: host
+    attributes:
+      label: Host and version
+      placeholder: "Claude Code 2.1.x on Windows 11, node 20"
+    validations: { required: true }
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: The command you ran and its actual output. If you could not run it, say so — that is always a valid answer here.
+      render: shell

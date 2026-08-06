@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 128" width="560" height="128">
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="7" transform="translate(6,28) scale(1.02)">
+    <path d="M21 24 L31 34 L54 10" stroke="#111111" stroke-opacity="0.25"/>
+    <path d="M10 38 L21 49 L45 23" stroke="#111111"/>
+  </g>
+  <text x="82" y="68" font-family="'DejaVu Sans Mono',ui-monospace,Menlo,monospace"
+        font-size="50" font-weight="700" letter-spacing="-1" fill="#111111">witness</text>
+  <text x="84" y="95" font-family="'DejaVu Sans',system-ui,sans-serif"
+        font-size="16" fill="#6b6b6b">a green check is not evidence. it is a claim.</text>
+</svg>

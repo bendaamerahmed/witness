@@ -1,0 +1,85 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ['18', '20', '22']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Rule copies match AGENTS.md
+        run: node scripts/check-rule-copies.js
+      - name: Manifest versions agree
+        run: node scripts/check-versions.js
+      - name: Docs links resolve
+        run: node scripts/check-links.js
+      - name: Unit and hook integration tests
+        run: node --test tests/*.test.js
+      - name: Detector precision and recall
+        run: node benchmarks/precision.js --gate
+
+  instrument:
+    name: benchmark instrument selftest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install pytest
+      # Proves the measurement harness can still tell a real fix from a
+      # fixture-fitted one. If this fails, no number this repo publishes is safe.
+      - run: python benchmarks/run.py --selftest
+
+  dogfood:
+    name: witness scans its own diff
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - uses: ./
+        with:
+          fail-on: ''          # advisory on our own repo too; we take our own advice
+          upload-sarif: 'true'
+
+  action-smoke:
+    name: action runs end to end
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Scan against the previous commit
+        shell: bash
+        run: |
+          node bin/witness-scan.js --base "${GITHUB_SHA}^" --sarif out.sarif
+          node -e "const d=require('./out.sarif');if(d.version!=='2.1.0')process.exit(1);console.log('sarif ok,',d.runs[0].results.length,'result(s)')"

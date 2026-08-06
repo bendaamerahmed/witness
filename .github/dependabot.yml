@@ -1,0 +1,8 @@
+version: 2
+updates:
+  # Zero runtime dependencies is a design constraint, so this only ever has
+  # Actions to update. That is the point.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule: { interval: monthly }
+    commit-message: { prefix: "ci" }
