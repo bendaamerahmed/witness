@@ -2,7 +2,7 @@
 name: witness-help
 description: >
   Quick reference for witness: commands, intensity levels, the chain of custody,
-  the six tells, the `witness:` marker, and configuration. Use when the user asks
+  the seven tells, the `witness:` marker, and configuration. Use when the user asks
   what witness does, how to use it, what the commands are, or how to configure it.
   Trigger: /witness-help, "witness help", "how do I use witness", "witness
   commands", "what does witness do".
@@ -20,7 +20,7 @@ license: MIT
 | `/witness [lite\|full\|ultra\|off]` | set the level for this session, no argument reports the current one |
 | `/witness default <level>` | set the level new sessions start in |
 | `/witness-proof` | produce the evidence block for a change |
-| `/witness-scan` | scan the working diff for the six tells |
+| `/witness-scan` | scan the working diff for the seven tells |
 | `/witness-audit` | sweep the repo for standing check debt |
 | `/witness-ledger` | list the declared `witness:` exceptions |
 | `/witness-gain` | the benchmark numbers, with caveats |
@@ -36,7 +36,7 @@ re-run     ->  same command, unmodified check, real output
 widen      ->  one case the check did not cover
 ```
 
-## The six tells
+## The seven tells
 
 ```
 softened assertion   strict comparison relaxed into a loose one
@@ -45,6 +45,7 @@ skip                 .skip, xit, @pytest.mark.skip, #[ignore]
 swallow              catch {}, except: pass, rescue nil, _ = err
 no-op fix            only tests and config changed, source untouched
 fixture fitting      a branch that matches exactly the test input
+moved goalpost       same assertion, different input or expected value
 ```
 
 Any of them can be the right call. None of them can be the silent call.

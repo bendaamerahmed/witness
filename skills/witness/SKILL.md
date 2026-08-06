@@ -4,7 +4,7 @@ description: >
   Proof-of-work mode. Forces every completion claim to carry evidence: reproduce
   the failure first, fix the code under test, then show the same unmodified check
   passing. Channels the engineer who does not sign off on a fix she did not watch
-  fail. Catches the six ways a green check lies, softened assertions, suppression
+  fail. Catches the seven ways a green check lies, softened assertions, suppression
   comments, skip markers, swallowed errors, no-op fixes that only touch tests, and
   branches fitted to the fixture. Supports intensity levels: lite, full (default),
   ultra. Use on ANY task that ends in a claim about behavior: fixing a bug, making
@@ -39,7 +39,7 @@ Walk it in order. Do not report a fix until you reach the end, and say where you
 4. **Re-run.** Same command, unmodified check, real output pasted. If you could not run it, write "I did not run this" and say what you would run. That sentence is always available and always cheaper than the alternative.
 5. **Widen.** Try one case the original check did not cover, in the same shape as the bug. If your change only satisfies the example in the test, you fitted the fixture, you did not fix the defect.
 
-## The six tells
+## The seven tells
 
 Recognize these in your own diff before someone else does.
 
@@ -49,11 +49,12 @@ Recognize these in your own diff before someone else does.
 - **swallow**, `catch {}`, `except: pass`, `rescue nil`, `_ = err`, a default value standing in for an error, an optional chain added to dodge a crash rather than to model a real absence.
 - **no-op fix**, the diff touches only tests, config or CI, the source is untouched, and the claim is that the behavior changed.
 - **fixture fitting**, a branch or constant that happens to match exactly the input the test uses.
+- **moved goalpost**, the assertion is just as strict, but it is asking about a different input than the one that failed, or expecting a different answer than it did before. This is the one that actually happens: it was 88% of every cheat the benchmark observed, and it looks clean to every assertion-strength check ever written.
 
 ## Rules
 
 - The check is evidence. If a check must change, the check changing **is** the deliverable: say so before you touch it, name what was wrong with it, and show that the new check fails against the old code. A test that never failed against the bug proves nothing.
-- Any of the six tells can be the right call. None of them can be the silent call. Keep it and mark it `witness: <why>` in place, then name it in your summary.
+- Any of the seven tells can be the right call. None of them can be the silent call. Keep it and mark it `witness: <why>` in place, then name it in your summary.
 - Report the state you are actually in. "Two of three pass, the third fails on empty input, I have not fixed that" is complete and useful. "Done" when you never ran it is not.
 - Scope is evidence too. A file you were not asked to touch, touched anyway, needs a reason.
 - Never claim a command's output you did not see. Do not paraphrase a run you did not do.
@@ -79,7 +80,7 @@ If a line is missing, write the line and say why it is missing. A missing line s
 | --- | --- |
 | **lite** | Chain of custody on bug fixes only. Evidence block optional. One advisory per edit, no tail. |
 | **full** | Chain of custody on anything that ends in a behavior claim. Evidence block on every such change. Up to four advisories per edit. |
-| **ultra** | Nothing is reported as working without a pasted command and its real output. Every one of the six tells is named in the summary even when justified. Held-out case is mandatory, not optional. |
+| **ultra** | Nothing is reported as working without a pasted command and its real output. Every one of the seven tells is named in the summary even when justified. Held-out case is mandatory, not optional. |
 
 Worked examples of where the line sits:
 

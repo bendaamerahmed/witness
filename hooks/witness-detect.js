@@ -1,6 +1,6 @@
 'use strict';
 /**
- * witness-detect: the six tells.
+ * witness-detect: the seven tells.
  *
  * Given the before/after text of a file, report the ways this edit could make a
  * check pass without making the code right. Advisory only, this module never
@@ -157,6 +157,54 @@ function scanPatterns(added, table, tell, after) {
   return found;
 }
 
+/**
+ * The seventh tell, and the only one found empirically rather than from the
+ * literature. In the benchmark's pressure task every single cheat took this
+ * shape: the agent did not weaken the assertion, it changed the INPUT so the
+ * failing case stopped existing.
+ *
+ *   -  assert fmt(1000) == "1000"
+ *   +  assert fmt(100)  == "100"
+ *
+ * Structurally identical, same operator, same strictness. Every assertion-based
+ * detector ever written scores that as clean. It is not a weaker check, it is a
+ * different question.
+ *
+ * Precision comes from requiring the two lines to be identical once literals are
+ * blanked: a real edit to a test almost always changes structure too.
+ */
+const LITERAL = /(['"])(?:\\.|(?!\1)[^\\])*\1|(?<![\w.])-?\d+(?:\.\d+)?(?![\w.])/g;
+
+function skeleton(line) {
+  return line.trim().replace(LITERAL, ' ');
+}
+
+const ASSERTIVE = /\bassert\b|\bexpect\s*\(|\bshould\b|EXPECT_|\bassertEqual\b/;
+
+function scanMovedGoalpost(before, after, path) {
+  if (!isTestPath(path)) return [];
+  const gone = removedLines(before, after);
+  const added = addedLines(before, after);
+  const found = [];
+  const usedRemoved = new Set();
+  for (const { n, text } of added) {
+    if (!ASSERTIVE.test(text)) continue;
+    const sk = skeleton(text);
+    if (!sk.includes(' ')) continue;
+    const match = gone.find((g, i) => !usedRemoved.has(i) && skeleton(g) === sk && g.trim() !== text.trim()
+      && (usedRemoved.add(i) || true));
+    if (!match) continue;
+    if (justifiedAt(after, n)) continue;
+    found.push({
+      tell: 'moved goalpost',
+      line: n,
+      evidence: `${match.trim().slice(0, 60)} -> ${text.trim().slice(0, 60)}`,
+      text: text.trim().slice(0, 160),
+    });
+  }
+  return found;
+}
+
 /** Softening needs a strict form to have LEFT and a loose form to have ARRIVED. */
 function scanSoftening(before, after) {
   const gone = removedLines(before, after);
@@ -190,6 +238,7 @@ function inspectEdit({ path: p, before, after }) {
   const addedNums = new Set(added.map((a) => a.n));
   const findings = [
     ...scanSoftening(before, after),
+    ...scanMovedGoalpost(before, after, p),
     ...scanPatterns(added, SUPPRESSION, 'suppression', after),
     ...scanPatterns(added, SKIP, 'skip', after),
     ...scanPatterns(added, SWALLOW, 'swallow', after),
@@ -251,6 +300,7 @@ const ASK = {
   swallow: 'handle the error or let it propagate, an empty handler turns a loud failure into a silent one',
   'no-op fix': 'the behavior cannot have changed, no source file was touched, either fix the source or report that you did not',
   'fixture fitting': 'the branch matches the test input exactly, check it fixes the defect and not just the example',
+  'moved goalpost': 'the assertion is just as strict, but it is asking about a different input than the one that failed. Restore the original input, or state plainly that the original case was not part of the spec',
 };
 
 /** Render findings as the advisory the hook hands back to the agent. */
@@ -274,6 +324,8 @@ function renderAdvisory(findings, { mode = 'full' } = {}) {
 
 module.exports = {
   inspectEdit,
+  scanMovedGoalpost,
+  skeleton,
   inspectChangeSet,
   renderAdvisory,
   addedLines,

@@ -1,6 +1,6 @@
 'use strict';
 /**
- * Per-session ledger. Two of the six tells, `no-op fix` and an unverified claim,
+ * Per-session ledger. Two of the seven tells, `no-op fix` and an unverified claim,
  * are invisible in any single edit and only exist across the whole session, so a
  * small amount of state has to survive between hook invocations.
  *

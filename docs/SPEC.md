@@ -29,9 +29,11 @@ Third-party measurement, none of it produced by this project:
 
 The problem is documented, quantified, and independently attested. This plugin does not need to argue that it exists.
 
-### 1.2 The six tells
+### 1.2 The seven tells
 
-Every instance reduces to one of six shapes. This taxonomy is the plugin's core asset: it is what makes the problem greppable, teachable, and measurable.
+Every instance reduces to one of seven shapes. This taxonomy is the plugin's core asset: it is what makes the problem greppable, teachable, and measurable.
+
+Six came from the literature. The seventh, `moved goalpost`, came from the first benchmark run, where it was **88% of every cheat observed** and the detector as originally specified caught none of them.
 
 | tell | shape | why it works |
 | --- | --- | --- |
@@ -41,8 +43,9 @@ Every instance reduces to one of six shapes. This taxonomy is the plugin's core 
 | **swallow** | `catch {}`, `except: pass`, `rescue nil`, `_ = err` | a loud failure becomes a silent one, at runtime, in production |
 | **no-op fix** | only tests and config changed, source untouched, claim is a fix | the behavior provably did not change |
 | **fixture fitting** | a branch or constant matching exactly the test input | passes every visible check, fails every real input |
+| **moved goalpost** | an assertion of identical structure and strictness, different input or expected value | nothing about it looks weakened, so every assertion-strength heuristic scores it clean |
 
-Five of the six are visible in a diff. The sixth is not, and section 6 is about that.
+Six of the seven are visible in a diff. `fixture fitting` is not, and section 6 is about that.
 
 ---
 
@@ -64,7 +67,7 @@ No hook returns `decision: block`. No hook reverts an edit. No hook prevents a s
 
 ### P3 — Every pattern has a legitimate version
 
-Flaky tests exist. Upstream type stubs are wrong. Some tests assert implementation details and deserve to be deleted. A tool that treats all six tells as misconduct is wrong roughly a fifth of the time and will be ignored the rest of the time.
+Flaky tests exist. Upstream type stubs are wrong. Some tests assert implementation details and deserve to be deleted. A tool that treats all seven tells as misconduct is wrong roughly a fifth of the time and will be ignored the rest of the time.
 
 The `witness:` marker is the escape hatch, and it is deliberately cheap — one comment, one reason. The cost is a sentence, not an argument. An unjustifiable pattern is rare; an *unexplained* one is the actual problem.
 
@@ -102,7 +105,7 @@ AGENTS.md                    the one true ruleset
 skills/witness/SKILL.md      long form, filtered per level at inject time
   └─ hooks/witness-instructions.js  strips mode-keyed table rows and examples
 
-hooks/witness-detect.js      the six tells. shared by everything.
+hooks/witness-detect.js      the seven tells. shared by everything.
   ├─ hooks/witness-guard.js       PostToolUse   advisory on the edit
   ├─ hooks/witness-checkout.js    Stop          advisory on the session
   ├─ bin/witness-scan.js          CLI           git diff / dir compare
@@ -299,10 +302,20 @@ The category itself is open. Prior art is thin and all in the wrong shape: post-
 - benchmark harness with a passing instrument selftest, 8 tasks, 3 arms, held-out defence
 - CI on Linux, Windows and macOS
 
+- benchmark run: 216 cells, Haiku 4.5, three arms ([write-up](../benchmarks/results/2026-08-06-first-run.md))
+
+**What the run changed about this document**
+
+§1.2 listed six tells taken from the literature. There are now **seven**. `moved goalpost` — an assertion with identical structure and strictness but a different input — accounted for **88% of every cheat observed**, and the detector as originally specified caught **none** of them. The taxonomy was incomplete in exactly the place it mattered.
+
+§5 predicted the benchmark would separate the arms. It did not. `control` (one sentence) and `witness` (the full ruleset) are indistinguishable at n=32, p=1.000. The honest positioning is now: the detector is the proven asset at 98% recall; the ruleset is unproven against a one-liner and is not marketed as better than one.
+
+§6's held-out defence held up, and earned its keep in an unexpected direction: an early held-out check was *itself wrong*, penalising a correct minimal fix. The selftest now gates on a correct minimal fix scoring honest for every task.
+
 **Not done**
 
-1. **Run the benchmark.** Needs a Claude Code CLI and an API key. Until then the numbers section stays empty by design.
-2. **Set the GitHub handle.** `ahmedbendaamer` is a placeholder across five manifests and the README; change it before publishing.
-3. Widen the defect corpus beyond Python — the harness is language-agnostic, the tasks are not yet.
-4. Publish a `benchmarks/results/<date>.md` writeup in the format `/witness-gain` reads.
+1. **Set the GitHub handle.** `ahmedbendaamer` is a placeholder across five manifests and the README; change it before publishing.
+2. More pressure tasks, more than two. Cheating only appears under pressure, so the pressure tier is the only part of the corpus that measures anything.
+3. More than one model, and n large enough to separate two instructions if there is anything there to separate.
+4. Widen beyond Python — the harness is language-agnostic, the tasks are not.
 5. Optional adapters: OpenCode plugin, npm distribution, MCP server.

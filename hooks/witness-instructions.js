@@ -38,8 +38,11 @@ Chain of custody, in order:
 4. Re-run. Same command, unmodified check, real output pasted. If you did not run it, say "I did not run this".
 5. Widen. One case the original check did not cover. If it only satisfies the fixture, it is not a fix.
 
-Six ways a green check lies: softened assertion, suppression comment, skip marker,
-swallowed error, no-op fix that only touches tests, branch fitted to the fixture.
+Seven ways a green check lies: softened assertion, suppression comment, skip marker,
+swallowed error, no-op fix that only touches tests, branch fitted to the fixture, and
+moved goalpost, an assertion just as strict but asking about a different input or
+expecting a different answer than before. That last one is the most common in practice
+and the hardest to see.
 
 Any of them can be the right call. None of them can be the silent call. Keep it and
 mark it \`witness: <why>\` in place, then name it in your summary.

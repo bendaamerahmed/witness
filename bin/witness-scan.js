@@ -77,7 +77,7 @@ function editsFromDirs(a, b) {
   return edits;
 }
 
-const RANK = ['no-op fix', 'softened assertion', 'swallow', 'skip', 'suppression', 'fixture fitting'];
+const RANK = ['no-op fix', 'moved goalpost', 'softened assertion', 'swallow', 'skip', 'suppression', 'fixture fitting'];
 
 function main() {
   const opt = parseArgs(process.argv.slice(2));

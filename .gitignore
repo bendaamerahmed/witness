@@ -1,6 +1,7 @@
 node_modules/
 benchmarks/runs/
 benchmarks/results/*.json
+!benchmarks/results/raw/
 .env
 __pycache__/
 *.pyc

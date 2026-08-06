@@ -2,7 +2,7 @@
 /**
  * PostToolUse: the only part of witness that watches instead of instructs.
  *
- * It reads the edit that just happened, looks for the six tells, and hands the
+ * It reads the edit that just happened, looks for the seven tells, and hands the
  * agent a sentence about what it just did. It never blocks, never rejects, never
  * reverts. The whole design bet is that an agent shown its own tell will explain
  * or undo it, and that an agent forbidden from the tell will find a subtler one.
