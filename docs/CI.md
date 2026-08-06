@@ -63,7 +63,7 @@ Findings land in the job summary and, with `security-events: write`, in the repo
 The scanner is a single Node file with no dependencies and no network access.
 
 ```bash
-npx witness-mode scan --base main
+npx @witness-plugin/witness --base main
 node bin/witness-scan.js --staged
 node bin/witness-scan.js --base main --sarif witness.sarif
 node bin/witness-scan.js --dir before/ --dir after/ --json
@@ -80,7 +80,7 @@ repos:
     hooks:
       - id: witness
         name: witness
-        entry: node node_modules/witness-mode/bin/witness-scan.js --staged
+        entry: node node_modules/@witness-plugin/witness/bin/witness-scan.js --staged
         language: system
         pass_filenames: false
 ```

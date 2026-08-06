@@ -8,6 +8,7 @@
 <br><br>
 
 [![ci](https://github.com/bendaamerahmed/witness/actions/workflows/ci.yml/badge.svg)](https://github.com/bendaamerahmed/witness/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@witness-plugin/witness?style=flat-square&color=111111)](https://www.npmjs.com/package/@witness-plugin/witness)
 ![precision](https://img.shields.io/badge/precision-100%25%20on%2055%20labeled%20cases-111111?style=flat-square)
 ![deps](https://img.shields.io/badge/dependencies-0-111111?style=flat-square)
 ![hooks](https://img.shields.io/badge/hooks-advisory%20only-111111?style=flat-square)
@@ -83,9 +84,9 @@ Findings land in the job summary and in your code scanning tab as `note`-level a
 ## Or as a CLI
 
 ```bash
-npx witness-mode scan --base main
-npx witness-mode scan --staged
-npx witness-mode scan --base main --sarif witness.sarif
+npx @witness-plugin/witness --base main
+npx @witness-plugin/witness --staged
+npx @witness-plugin/witness --base main --sarif witness.sarif
 ```
 
 ```

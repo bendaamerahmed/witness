@@ -5,6 +5,8 @@ on:
 
 permissions:
   contents: write
+  # Required for npm trusted publishing (OIDC). Without it npm reports a
+  # misleading 404/ENEEDAUTH rather than an auth error. See npm/cli#9088.
   id-token: write
 
 jobs:
@@ -13,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '20', registry-url: 'https://registry.npmjs.org' }
+        with: { node-version: '22' }
       - uses: actions/setup-python@v5
         with: { python-version: '3.11' }
       - run: pip install pytest
@@ -27,17 +29,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Trusted publishing needs Node >= 22.14.0 and npm >= 11.5.1. `setup-node`
+      # ships an npm older than that even on Node 22, so it is upgraded
+      # explicitly. No `registry-url` and no auth token: this publishes over
+      # OIDC, and there is no long-lived npm credential in this repository.
       - uses: actions/setup-node@v4
-        with: { node-version: '20', registry-url: 'https://registry.npmjs.org' }
-      - name: Publish to npm with provenance
-        run: npm publish --provenance --access public
+        with: { node-version: '22' }
+      - run: npm install -g npm@latest
+      - run: npm --version
+
+      - name: Publish to npm via trusted publishing
+        # First publish of a package cannot use OIDC (npm/cli#8544), so v1 is
+        # published manually and this step takes over from the second release on.
+        # continue-on-error so a registry problem never blocks the GitHub release.
+        run: npm publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
         continue-on-error: true
+
       - name: Package the plugin
         run: |
           zip -r "witness-${GITHUB_REF_NAME}.zip" . \
             -x '.git/*' 'node_modules/*' 'benchmarks/runs/*'
+
       - name: GitHub release
         uses: softprops/action-gh-release@v2
         with:

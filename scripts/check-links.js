@@ -6,7 +6,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 
 const DOCS = ['README.md', 'CONTRIBUTING.md', 'SECURITY.md', 'docs/SPEC.md', 'docs/TELLS.md',
-  'docs/CI.md', 'docs/ROADMAP.md', 'CODE_OF_CONDUCT.md', 'CHANGELOG.md', 'benchmarks/README.md', 'benchmarks/results/2026-08-06-first-run.md', 'examples/README.md'];
+  'docs/CI.md', 'docs/PUBLISHING.md', 'docs/ROADMAP.md', 'CODE_OF_CONDUCT.md', 'CHANGELOG.md', 'benchmarks/README.md', 'benchmarks/results/2026-08-06-first-run.md', 'examples/README.md'];
 
 let failed = false;
 for (const doc of DOCS) {

@@ -41,11 +41,31 @@ test('CI never require()s a non-.js file', () => {
   assert.deepStrictEqual(bad, [], `CI require()s non-JS file(s): ${bad.join(', ')}`);
 });
 
-test('the bin entry point exists and is declared', () => {
+test('every declared bin exists and is executable as a script', () => {
   const pkg = json('package.json');
-  assert.ok(pkg.bin && pkg.bin['witness-scan'], 'package.json must declare the witness-scan bin');
-  assert.ok(fs.existsSync(path.join(ROOT, pkg.bin['witness-scan'])), 'the declared bin path does not exist');
-  assert.match(read(pkg.bin['witness-scan']), /^#!\/usr\/bin\/env node/, 'the bin needs a shebang');
+  assert.ok(pkg.bin && Object.keys(pkg.bin).length, 'package.json must declare at least one bin');
+  for (const [name, rel] of Object.entries(pkg.bin)) {
+    assert.ok(fs.existsSync(path.join(ROOT, rel)), `bin "${name}" points at a missing file: ${rel}`);
+    assert.match(read(rel), /^#!\/usr\/bin\/env node/, `bin "${name}" needs a shebang`);
+  }
+});
+
+test('a scoped package declares a bin matching the name after the scope', () => {
+  // `npx @scope/name` resolves the bin called `name`. Without it, npx on a
+  // scoped package either guesses or fails, and every npx line in the docs breaks.
+  const pkg = json('package.json');
+  const m = pkg.name.match(/^@[^/]+\/(.+)$/);
+  if (!m) return;
+  assert.ok(pkg.bin[m[1]], `scoped package ${pkg.name} must declare a bin named "${m[1]}" for npx to resolve it`);
+});
+
+test('publishConfig is set for a public scoped package with provenance', () => {
+  const { publishConfig, name } = json('package.json');
+  if (name.startsWith('@')) {
+    assert.strictEqual(publishConfig.access, 'public', 'a scoped package defaults to restricted without this');
+  }
+  assert.strictEqual(publishConfig.provenance, true,
+    'npm docs say provenance is automatic under OIDC, but in practice it needs to be requested');
 });
 
 test('every file listed in package.json files[] exists', () => {

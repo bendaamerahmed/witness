@@ -1,0 +1,102 @@
+# Publishing to npm
+
+Package: **`@witness-plugin/witness`**, owned by the `witness-plugin` org.
+
+There is **no npm token in this repository**, and there should never be one. Releases after the first publish authenticate over OIDC.
+
+## Why there is no token
+
+npm [permanently revoked all classic tokens on 9 December 2025](https://socket.dev/blog/npm-revokes-classic-tokens). Creating one is no longer possible. The two supported options are:
+
+| option | what it is | used here |
+| --- | --- | --- |
+| **Trusted publishing (OIDC)** | GitHub Actions proves its identity to npm per run. No stored credential. | yes, for every release after the first |
+| Granular access token | A scoped, expiring credential you store as a secret and rotate | no |
+
+## One-time setup
+
+### 1. First publish, from your machine
+
+npm cannot create a package over OIDC — a trusted publisher is configured *on an existing package*, so the first version has to come from somewhere else ([npm/cli#8544](https://github.com/npm/cli/issues/8544)).
+
+```bash
+npm --version          # needs >= 11.5.1
+node --version         # needs >= 22.14.0
+npm install -g npm@latest   # if either is behind
+
+npm login              # browser + 2FA
+npm whoami             # confirm
+
+npm publish            # access + provenance come from package.json publishConfig
+```
+
+`publishConfig` already sets `access: public` (scoped packages are private by default and would otherwise be rejected on a free plan) and `provenance: true`.
+
+If npm asks for a one-time password, that is your 2FA working. Good.
+
+### 2. Configure the trusted publisher
+
+Once the package exists: **npmjs.com → the package → Settings → Trusted Publisher → GitHub Actions**
+
+| field | value |
+| --- | --- |
+| Organization or user | `bendaamerahmed` |
+| Repository | `witness` |
+| Workflow filename | `release.yml` |
+| Environment | *leave empty* |
+| Allowed actions | `npm publish` |
+
+The workflow filename is **just the filename**, not a path. `.github/workflows/release.yml` will not match.
+
+### 3. Require 2FA for the org
+
+**npmjs.com → witness-plugin → Settings → Require two-factor authentication**
+
+OIDC removes the token, not the need for account hygiene. The OpenJS Foundation's [caution about OIDC maturity](https://socket.dev/blog/npm-revokes-classic-tokens) is worth taking seriously: 2FA on the account is still the control that matters.
+
+### 4. Done
+
+Every subsequent release is:
+
+```bash
+git tag -a v0.3.0 -m "witness v0.3.0"
+git push origin v0.3.0
+```
+
+The release workflow verifies, publishes over OIDC, and creates the GitHub release. No secret is involved at any point.
+
+## What the workflow does
+
+```yaml
+permissions:
+  id-token: write        # without this npm reports a misleading 404
+```
+
+- Node 22 and `npm install -g npm@latest`, because trusted publishing needs **npm ≥ 11.5.1 and Node ≥ 22.14.0** and `setup-node` ships an older npm even on Node 22.
+- No `registry-url:` and no `NODE_AUTH_TOKEN`. Setting `registry-url` writes an `.npmrc` expecting a token and is a common cause of `ENEEDAUTH` under OIDC.
+- `NPM_CONFIG_PROVENANCE: true`. The docs say provenance is automatic under OIDC; in practice it needs asking for.
+- `npm publish` is `continue-on-error`, so a registry problem never blocks the GitHub release.
+
+## Version discipline
+
+`scripts/check-versions.js` runs in the release workflow and asserts the tag equals the version in **all five** manifests:
+
+```
+.claude-plugin/plugin.json
+.codex-plugin/plugin.json
+.github/plugin/plugin.json
+gemini-extension.json
+package.json
+```
+
+A mistagged release cannot reach the registry. Bump all five, or none.
+
+## Troubleshooting
+
+**`ENEEDAUTH` or a 404 on publish.** Almost always the trusted publisher config not matching: wrong workflow filename, a path instead of a filename, or an environment set on one side only. [npm/cli#9088](https://github.com/npm/cli/issues/9088) tracks the misleading error.
+
+**`You must sign up for private packages`.** `publishConfig.access` is missing. Scoped packages default to restricted.
+
+**Provenance missing from the published page.** The repository must be public and `id-token: write` must be present on the job.
+
+**First publish rejected as an existing name.** Someone took it. Both `@witness-plugin/witness` and `witness-mode` were unclaimed when this was written; scoped names under an org you control cannot be taken from you.

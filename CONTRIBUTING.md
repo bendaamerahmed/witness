@@ -48,6 +48,10 @@ The most valuable issue you can file. Please include the before, the after, the 
 
 Describe what changed and why. If you changed a number the project publishes, say which number and what moved it.
 
+## Releasing
+
+Bump all five manifests, tag, push. `scripts/check-versions.js` refuses a release whose tag disagrees with any manifest. See [docs/PUBLISHING.md](docs/PUBLISHING.md) — there is no npm token in this repository and there should never be one.
+
 ## Code of conduct
 
 By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
