@@ -63,11 +63,15 @@ Findings land in the job summary and, with `security-events: write`, in the repo
 The scanner is a single Node file with no dependencies and no network access.
 
 ```bash
+npx @witness-plugin/witness --help          # every flag, with examples
 npx @witness-plugin/witness --base main
-node bin/witness-scan.js --staged
-node bin/witness-scan.js --base main --sarif witness.sarif
-node bin/witness-scan.js --dir before/ --dir after/ --json
+npx @witness-plugin/witness --staged
+npx @witness-plugin/witness --base main --sarif witness.sarif
+npx @witness-plugin/witness --dir before/ --dir after/ --json
 ```
+
+`--dir` needs no git repository at all, which is useful for comparing two
+extracted trees or a build output against its input.
 
 Exit codes: `0` clean or advisory-only, `1` a `--fail-on` tell was found, `2` the scanner could not run. Without `--fail-on` it can never fail your build.
 

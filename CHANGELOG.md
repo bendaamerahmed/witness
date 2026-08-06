@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.2] — 2026-08-06
+
+Usability fixes found by actually running the published package through `npx`.
+
+### Added
+
+- **`--help`**. It did not exist. `witness --help` fell through into a scan, so the first thing anyone typing it outside a git repository saw was a git error. The help now documents every flag, the seven tells, the exit codes, and the `witness:` escape hatch.
+- **`--version`**.
+- A test asserting **every flag the parser accepts appears in `--help`**, so the two cannot drift.
+
+### Fixed
+
+- **The error outside a git repository was a leaked `execFileSync` message** (`Command failed: git diff --name-only` followed by git's own usage text). It now says what happened and points at `--cwd` and `--dir`.
+
 ## [0.2.1] — 2026-08-06
 
 First public release. Fixes everything the first public CI run found.

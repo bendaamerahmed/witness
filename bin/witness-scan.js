@@ -31,12 +31,63 @@ function git(args, cwd) {
   });
 }
 
+const HELP = `witness — find changes that make a check pass without making the code right.
+
+USAGE
+  witness [options]
+
+  With no options, scans unstaged changes in the current git repository.
+
+OPTIONS
+  --staged                 scan the index instead of the working tree
+  --base <ref>             scan a branch against its merge base with <ref>
+  --dir <a> --dir <b>      compare two directory trees, no git required
+  --cwd <path>             run against a different repository
+
+  --json                   machine-readable output
+  --sarif [file]           SARIF 2.1.0 for GitHub code scanning ("-" for stdout)
+  --level <lvl>            SARIF level: note (default), warning, error
+
+  --fail-on <tells>        exit 1 if any of these are found, comma separated,
+                           or "any". Omitted means advisory only, and nothing
+                           can ever fail your build.
+
+  -h, --help               this text
+  -v, --version            print the version
+
+THE SEVEN TELLS
+  moved-goalpost       same assertion, different input or expected value
+  no-op-fix            only tests changed, and a check got weaker
+  softened-assertion   a strict comparison relaxed into a loose one
+  swallow              an error path silenced rather than handled
+  skip                 a test disabled rather than made to pass
+  suppression          a type, lint or CI gate turned off
+  fixture-fitting      a branch keyed on the exact value the test uses
+
+EXIT CODES
+  0   clean, or findings but no --fail-on gate
+  1   a --fail-on tell was found
+  2   the scanner could not run
+
+EXAMPLES
+  witness                                    scan what you are about to commit
+  witness --base main                        review a branch
+  witness --base main --sarif witness.sarif  produce SARIF for CI
+  witness --fail-on moved-goalpost,no-op-fix gate on the two least ambiguous
+
+Every finding has a legitimate version. If it is the right call, keep it and
+mark the line \`witness: <why>\` — that silences it and records the decision.
+
+  https://github.com/bendaamerahmed/witness`;
+
 function parseArgs(argv) {
   const opt = { staged: false, base: null, json: false, sarif: null, failOn: [],
-                level: 'note', cwd: process.cwd(), dirs: [] };
+                level: 'note', cwd: process.cwd(), dirs: [], help: false, version: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--staged') opt.staged = true;
+    if (a === '--help' || a === '-h') opt.help = true;
+    else if (a === '--version' || a === '-v' || a === '-V') opt.version = true;
+    else if (a === '--staged') opt.staged = true;
     else if (a === '--json') opt.json = true;
     else if (a === '--sarif') {
       const next = argv[i + 1];
@@ -101,11 +152,27 @@ const RANK = ['no-op fix', 'moved goalpost', 'softened assertion', 'swallow', 's
 
 function main() {
   const opt = parseArgs(process.argv.slice(2));
+
+  // Before anything else. `--help` used to fall through into a scan, which on a
+  // non-git directory meant the first thing a new user saw was a git error.
+  if (opt.help) { process.stdout.write(HELP + '\n'); return; }
+  if (opt.version) { process.stdout.write(require('../package.json').version + '\n'); return; }
+
   let edits;
   try {
     edits = opt.dirs.length === 2 ? editsFromDirs(opt.dirs[0], opt.dirs[1]) : editsFromGit(opt);
   } catch (e) {
-    process.stderr.write(`witness-scan: ${e.message}\n`);
+    const msg = String(e.message || e);
+    if (/not a git repository/i.test(msg)) {
+      process.stderr.write(
+        'witness: this is not a git repository.\n\n'
+        + '  witness reads a diff, so it needs either a repository or two directories:\n'
+        + '    witness --cwd <path-to-a-repo>\n'
+        + '    witness --dir before/ --dir after/\n\n'
+        + '  witness --help for everything else.\n');
+    } else {
+      process.stderr.write(`witness: ${msg.split('\n')[0]}\n\n  witness --help for usage.\n`);
+    }
     process.exit(2);
   }
 

@@ -84,6 +84,7 @@ Findings land in the job summary and in your code scanning tab as `note`-level a
 ## Or as a CLI
 
 ```bash
+npx @witness-plugin/witness --help
 npx @witness-plugin/witness --base main
 npx @witness-plugin/witness --staged
 npx @witness-plugin/witness --base main --sarif witness.sarif
