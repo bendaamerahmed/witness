@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: '22' }
       - uses: actions/setup-python@v5
         with: { python-version: '3.11' }
@@ -34,7 +34,7 @@ jobs:
       # ships an npm older than that even on Node 22, so it is upgraded
       # explicitly. No `registry-url` and no NODE_AUTH_TOKEN: this publishes over
       # OIDC, and there is no long-lived npm token anywhere in this repository.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: '22' }
       - run: npm install -g npm@latest
       - run: npm --version
