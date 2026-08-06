@@ -32,7 +32,9 @@ jobs:
       - name: Docs links resolve
         run: node scripts/check-links.js
       - name: Unit and hook integration tests
-        run: node --test tests/*.test.js
+        # No shell glob: bash expands tests/*.test.js, Windows cmd and PowerShell
+        # do not, and node then looks for a file literally named '*.test.js'.
+        run: node --test
       - name: Detector precision and recall
         run: node benchmarks/precision.js --gate
 
@@ -82,4 +84,11 @@ jobs:
         shell: bash
         run: |
           node bin/witness-scan.js --base "${GITHUB_SHA}^" --sarif out.sarif
-          node -e "const d=require('./out.sarif');if(d.version!=='2.1.0')process.exit(1);console.log('sarif ok,',d.runs[0].results.length,'result(s)')"
+          # require() infers a loader from the extension and has no idea what
+          # .sarif is, so it parsed the JSON as JavaScript.
+          node -e "
+            const d = JSON.parse(require('fs').readFileSync('out.sarif', 'utf8'));
+            if (d.version !== '2.1.0') { console.error('bad sarif version', d.version); process.exit(1); }
+            if (!d.runs[0].tool.driver.rules.length) { console.error('no rules declared'); process.exit(1); }
+            console.log('sarif ok,', d.runs[0].results.length, 'result(s),', d.runs[0].tool.driver.rules.length, 'rules');
+          "

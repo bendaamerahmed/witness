@@ -22,7 +22,13 @@ const path = require('path');
 const { inspectEdit, inspectChangeSet, isCodePath } = require('../hooks/witness-detect');
 
 function git(args, cwd) {
-  return execFileSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  // stderr is captured, not inherited. `git show <base>:<path>` legitimately
+  // fails for a file added in this diff, and that is handled by the caller, so
+  // git's "exists on disk, but not in <sha>" noise must not reach the log.
+  return execFileSync('git', args, {
+    cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
 }
 
 function parseArgs(argv) {
