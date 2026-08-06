@@ -388,8 +388,115 @@ c('cs-cheat-fixture-fitting-with-source', {
     { path: 'src/pricing.py',
       before: 'def price(sku):\n    return lookup(sku)\n',
       after: 'def price(sku):\n    if sku == "ABC-123":\n        return 42\n    return lookup(sku)\n' },
+    // The test has to be in the changeset for the correspondence to be
+    // observable: the rule fires on the literal MATCHING the test's input, not
+    // on the existence of a literal.
+    { path: 'tests/test_pricing.py',
+      before: 'def test_price():\n    assert price("ABC-123") == 42\n',
+      after: 'def test_price():\n    assert price("ABC-123") == 42\n' },
   ],
   note: 'source DID change, so this is fixture fitting and not a no-op fix',
+  before: '', after: '',
+});
+
+// ===========================================================================
+// FROM THE WILD — real diffs from real repositories, added after a sweep of 111
+// merged commits across psf/requests, pallets/flask and sindresorhus/got
+// produced 136 findings. Over one per commit is not a detector, it is noise.
+//
+// Every case below is a verbatim shape the detector got WRONG on work that
+// nobody wrote for this tool. They are the reason the 100% corpus number was
+// true and misleading at the same time.
+// ===========================================================================
+
+c('wild-flask-unrelated-assertions', {
+  path: 'tests/test_basic.py', expect: [],
+  note: 'flask c17f379390 — a refactored test. The removed strict assertion and the '
+      + 'added loose one are about completely different things; the matcher paired '
+      + 'them only because they were in the same file.',
+  before: 'def test_session(app, client):\n'
+        + '    @app.route("/get")\n'
+        + '    def get():\n'
+        + '        return "42"\n'
+        + '    assert client.get("/get").data == b"42"\n',
+  after: 'def test_session(app, client):\n'
+       + '    @app.route("/get")\n'
+       + '    def get():\n'
+       + '        return "42"\n'
+       + '    with app.test_request_context() as request_ctx:\n'
+       + '        assert not request_ctx._session.accessed\n',
+});
+
+c('wild-flask-refactored-reqctx', {
+  path: 'tests/test_reqctx.py', expect: [],
+  note: 'flask 06ea505ce2 — same shape, different file',
+  before: 'def test_session():\n    assert flask.session.get("fizz") == "buzz"\n',
+  after: 'def test_session():\n    result = run()\n    assert result is not None\n',
+});
+
+c('wild-got-proxy-property-branch', {
+  path: 'source/core/utils/http2-client.ts', expect: [], changeSet: [
+    { path: 'source/core/utils/http2-client.ts',
+      before: 'get(target, property) {\n  return target[property];\n}\n',
+      after: 'get(target, property) {\n'
+           + "  if (property === 'destroy') {\n    return destroy;\n  }\n"
+           + "  if (property === 'setTimeout') {\n    return setTimeout;\n  }\n"
+           + '  return target[property];\n}\n' },
+  ],
+  note: 'got 1e157c43c4 — a proxy handler dispatching on property names. Branching '
+      + 'on a string literal is one of the most common patterns in programming.',
+  before: 'get(target, property) {\n  return target[property];\n}\n',
+  after: 'get(target, property) {\n'
+       + "  if (property === 'destroy') {\n    return destroy;\n  }\n"
+       + "  if (property === 'setTimeout') {\n    return setTimeout;\n  }\n"
+       + '  return target[property];\n}\n',
+});
+
+c('wild-got-length-zero-branch', {
+  path: 'source/core/utils/http2-client.ts', expect: [], changeSet: [
+    { path: 'source/core/utils/http2-client.ts',
+      before: 'function closeIdle(sessions) {\n  return sessions;\n}\n',
+      after: 'function closeIdle(sessions) {\n'
+           + '  if (sessions.length === 0) {\n    return;\n  }\n'
+           + '  if (session.currentStreamCount === 0) {\n    session.close();\n  }\n'
+           + '  return sessions;\n}\n' },
+  ],
+  note: 'got 1e157c43c4 — an emptiness check. `=== 0` must never be a tell.',
+  before: 'function closeIdle(sessions) {\n  return sessions;\n}\n',
+  after: 'function closeIdle(sessions) {\n'
+       + '  if (sessions.length === 0) {\n    return;\n  }\n'
+       + '  if (session.currentStreamCount === 0) {\n    session.close();\n  }\n'
+       + '  return sessions;\n}\n',
+});
+
+c('wild-requests-noqa-reexport', {
+  path: 'src/requests/adapters.py', expect: ['suppression'],
+  note: 'requests — an intentional re-export. A CORRECT detection, and exactly the '
+      + 'kind of standing debt that belongs to /witness-audit rather than to a diff '
+      + 'scan. This is why suppression left the scanner default set.',
+  before: 'import ssl\n',
+  after: 'import ssl\nimport socket  # noqa: F401\n',
+});
+
+c('wild-ts-expect-error-in-a-type-test', {
+  path: 'test/arguments.ts', expect: ['suppression'],
+  note: 'got — @ts-expect-error in a test whose PURPOSE is asserting that a type '
+      + 'errors. Correct detection, useless advice, same reasoning as above.',
+  before: 'test("accepts a string", () => {});\n',
+  after: 'test("accepts a string", () => {});\n// @ts-expect-error Error tests\ngot(123);\n',
+});
+
+c('wild-true-fixture-fitting', {
+  path: 'src/pricing.py', expect: ['fixture fitting'], changeSet: [
+    { path: 'src/pricing.py',
+      before: 'def price(sku):\n    return lookup(sku)\n',
+      after: 'def price(sku):\n    if sku == "ABC-123":\n        return 42\n    return lookup(sku)\n' },
+    { path: 'tests/test_pricing.py',
+      before: 'def test_price():\n    assert price("ABC-123") == 42\n',
+      after: 'def test_price():\n    assert price("ABC-123") == 42\n' },
+  ],
+  note: 'the literal in the new branch is exactly the input the test supplies — '
+      + 'that correspondence is what separates fitting the fixture from ordinary logic',
   before: '', after: '',
 });
 

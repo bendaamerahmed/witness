@@ -63,7 +63,12 @@ This is a changeset-scope tell. A single edit cannot assert "no source file chan
 
 **When it is legitimate.** The precise value genuinely is not part of the contract, and the loose form is what you actually meant.
 
-**How it is detected.** Requires **both** a removed strict form and an added loose form in the same edit. A loose assertion appearing on its own is new coverage, not softening.
+**How it is detected.** Requires **both** a removed strict form and an added loose form, sitting within 8 lines of each other, **and** sharing at least one subject identifier. Without locality and subject it paired unrelated assertions in a refactored test — on real commits it produced this and called it a softening:
+
+```diff
+-   assert client.get("/get").data == b"42"
++   assert not request_ctx._session.accessed
+```
 
 ---
 
@@ -118,7 +123,11 @@ This is a changeset-scope tell. A single edit cannot assert "no source file chan
 
 **When it is legitimate.** Constantly. Upstream stubs are wrong, generated code trips linters, some rules do not fit some files.
 
-**How it is detected.** A table across TypeScript, ESLint, Python, Rust, Java, Go, shell and GitHub Actions — but only on **added** lines. A suppression that was already in the file is not this edit's problem; [`/witness-audit`](../skills/witness-audit/SKILL.md) covers standing debt.
+**How it is detected.** A table across TypeScript, ESLint, Python, Rust, Java, Go, shell and GitHub Actions — but only on **added** lines. A suppression that was already in the file is not this edit's problem.
+
+**This rule is off by default in the CLI and the Action.** On 111 real merged commits it produced 100 of 136 findings, and essentially every one was intentional and long-standing: `# noqa: F401` on a deliberate re-export, `@ts-expect-error` in a test whose *purpose* is asserting a type error, a file-level `eslint-disable` on a vendored client. All correct detections; none of them things a maintainer wants to be told about a pull request. Standing debt is what [`/witness-audit`](../skills/witness-audit/SKILL.md) is for.
+
+It stays **on in the agent hook**, where the question is different: an agent that just added `# type: ignore` while trying to make something pass is exactly what this project exists to catch. Turn it on anywhere with `--all` or `--rules suppression`.
 
 ---
 
@@ -137,9 +146,11 @@ This is a changeset-scope tell. A single edit cannot assert "no source file chan
 
 **When it is legitimate.** A genuine special case that happens to be the one under test.
 
-**How it is detected.** A new branch against a **bare literal** in a source file. A branch against a named constant is domain logic and is never flagged.
+**How it is detected.** Three conditions, all necessary. The branch is against a **bare literal**; that literal is one a **test in the same changeset actually supplies**; and the edit adds only **one** such branch. A branch against a named constant is domain logic. A trivial literal like `0` or `1` is a boundary check. Several literal branches at once is a dispatch table.
 
-**This is the tell no diff-based detector can catch reliably.** The heuristic gets the obvious form and will miss a determined one. That limitation is why the benchmark leans on held-out tests the agent never sees, rather than on this rule.
+Without the correspondence requirement this rule produced 24 findings on 111 real commits and every one was wrong — `if (property === 'destroy')` in a proxy handler, `if (sessions.length === 0)` in an emptiness check.
+
+**This is still the tell no diff-based detector can catch reliably.** The heuristic gets the obvious form and will miss a determined one. That limitation is why the benchmark leans on held-out tests the agent never sees, rather than on this rule.
 
 ---
 

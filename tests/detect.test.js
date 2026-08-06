@@ -134,19 +134,82 @@ test('no-op fix does not fire when a source file changed too', () => {
   assert.deepStrictEqual(tells(found), []);
 });
 
-test('fixture fitting fires on a new literal-keyed branch in source', () => {
+// Fixture fitting is a CORRESPONDENCE between a new branch and the test's input,
+// not merely a branch against a literal. The first version had no correspondence
+// requirement and produced 24 findings on 111 real commits, all of them wrong.
+const withTest = (sourceEdit, testBody) => inspectChangeSet([
+  sourceEdit,
+  { path: 'tests/test_pricing.py', before: testBody, after: testBody },
+]);
+
+test('fixture fitting fires when the branch literal is the test input', () => {
+  const found = withTest(
+    { path: 'src/pricing.py', before: 'def price(sku):\n    return lookup(sku)\n',
+      after: 'def price(sku):\n    if sku == "ABC-123":\n        return 42\n    return lookup(sku)\n' },
+    'def test_price():\n    assert price("ABC-123") == 42\n',
+  );
+  assert.deepStrictEqual(tells(found), ['fixture fitting']);
+});
+
+test('fixture fitting stays quiet when the literal is nothing to do with the test', () => {
+  const found = withTest(
+    { path: 'src/pricing.py', before: 'def price(sku):\n    return lookup(sku)\n',
+      after: 'def price(sku):\n    if sku == "LEGACY-7":\n        return legacy()\n    return lookup(sku)\n' },
+    'def test_price():\n    assert price("ABC-123") == 42\n',
+  );
+  assert.deepStrictEqual(tells(found), []);
+});
+
+test('fixture fitting stays quiet with no test in the changeset at all', () => {
+  // Without a test to compare against there is no correspondence to observe.
   const found = inspectChangeSet([
     { path: 'src/pricing.py', before: 'def price(sku):\n    return lookup(sku)\n',
       after: 'def price(sku):\n    if sku == "ABC-123":\n        return 42\n    return lookup(sku)\n' },
   ]);
-  assert.deepStrictEqual(tells(found), ['fixture fitting']);
+  assert.deepStrictEqual(tells(found), []);
+});
+
+test('fixture fitting ignores trivial literals like 0 and 1', () => {
+  // got 1e157c43c4: `if (sessions.length === 0)` is an emptiness check, and it
+  // fired 24 times across three repositories before this guard existed.
+  const found = withTest(
+    { path: 'src/pool.js', before: 'function close(s) {\n  return s;\n}\n',
+      after: 'function close(s) {\n  if (s.length === 0) {\n    return;\n  }\n  return s;\n}\n' },
+    'test("close", () => { expect(close([])).toBe(0); });\n',
+  );
+  assert.deepStrictEqual(tells(found), []);
 });
 
 test('fixture fitting does not fire on a branch against a named constant', () => {
-  const found = inspectChangeSet([
-    { path: 'src/pricing.py', before: 'x = 1\n', after: 'x = 1\nif sku == DEFAULT_SKU:\n    return base\n' },
-  ]);
+  const found = withTest(
+    { path: 'src/pricing.py', before: 'x = 2\n', after: 'x = 2\nif sku == DEFAULT_SKU:\n    return base\n' },
+    'def test_x():\n    assert x == 2\n',
+  );
   assert.deepStrictEqual(tells(found), []);
+});
+
+test('fixture fitting does not fire on a proxy dispatching on property names', () => {
+  // got 1e157c43c4 — the exact shape that produced the worst false positives.
+  // Note the test body genuinely contains 'destroy', so the literal
+  // correspondence IS satisfied here. What saves it is that a dispatch table
+  // adds several literal branches at once, and fitting a fixture adds one.
+  const found = withTest(
+    { path: 'src/proxy.ts', before: 'get(t, p) {\n  return t[p];\n}\n',
+      after: "get(t, p) {\n  if (p === 'destroy') {\n    return d;\n  }\n"
+           + "  if (p === 'setTimeout') {\n    return s;\n  }\n  return t[p];\n}\n" },
+    "test('destroy', () => { proxy.destroy(); proxy.setTimeout(1); });\n",
+  );
+  assert.deepStrictEqual(tells(found), []);
+});
+
+test('fixture fitting still fires on a single fitted branch', () => {
+  // The guard must not swallow the real thing: one branch, matching the test.
+  const found = withTest(
+    { path: 'src/proxy.ts', before: 'get(t, p) {\n  return t[p];\n}\n',
+      after: "get(t, p) {\n  if (p === 'ABC-123') {\n    return 42;\n  }\n  return t[p];\n}\n" },
+    "test('x', () => { expect(get(t, 'ABC-123')).toBe(42); });\n",
+  );
+  assert.deepStrictEqual(tells(found), ['fixture fitting']);
 });
 
 // ---------------------------------------------------------------------------

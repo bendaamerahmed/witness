@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.3.0] — 2026-08-06
+
+The release where the detector met real repositories and lost.
+
+Running v0.2.2 over **111 real merged commits** from `requests`, `flask` and `got` produced **136 findings** — more than one per commit. The labeled corpus said 100% precision. Both were true: the corpus was written by the same person as the detector, so it measured intent, not reality.
+
+### Fixed
+
+- **`softened assertion` paired unrelated lines.** It matched any removed strict assertion against any added loose one anywhere in the same file, so a refactored test manufactured findings. It now requires the two to sit within 8 lines of each other **and** share a subject identifier.
+- **`fixture fitting` fired on ordinary logic.** 24 of 24 findings were wrong: `if (property === 'destroy')` in a proxy handler, `if (sessions.length === 0)` in an emptiness check. It now requires the literal to be one the *test* supplies, ignores trivial literals, and stays quiet when several literal branches arrive together, because that is a dispatch table.
+- **`suppression` left the scanner's default rule set.** 100 of 136 findings, essentially all intentional and long-standing. Standing debt belongs to `/witness-audit`. Still on in the agent hook; `--all` turns it on anywhere.
+- **Unknown flags were silently ignored.** `--saarif` quietly ran a plain scan. Now refused, with a Damerau-Levenshtein suggestion.
+
+### Added
+
+- **Report formats: `--format text|json|md|html|pdf|sarif`, `-o/--out`.** The PDF writer is hand-rolled — zero dependencies is a stated promise and not worth trading for report formatting.
+- **Finding grouping.** One express commit changed `Content-Disposition` quoting and produced 18 individually correct findings. That is one decision, and text and Markdown now say so. SARIF still emits every site, because GitHub annotates lines.
+- **`benchmarks/wild.js`** — the sweep as a permanent, reproducible benchmark, published alongside the corpus number so the real-world rate can never be hidden again.
+- `--rules`, `--all`, `--quiet`, `--level`, and a `--help` that documents every flag.
+
+### Numbers
+
+| | v0.2.2 | v0.3.0 |
+| --- | ---: | ---: |
+| findings per 100 real commits | 122 | 20.5 |
+| **issues per 100 real commits** | — | **11.1** |
+| labeled corpus | 59 cases | 66 cases |
+| tests | 85 | 105 |
+
+There is deliberately **no precision figure** for the wild sweep. Nobody has labeled those commits, and a rate is not an accuracy.
+
 ## [0.2.2] — 2026-08-06
 
 Usability fixes found by actually running the published package through `npx`.

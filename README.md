@@ -9,7 +9,7 @@
 
 [![ci](https://github.com/bendaamerahmed/witness/actions/workflows/ci.yml/badge.svg)](https://github.com/bendaamerahmed/witness/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@witness-plugin/witness?style=flat-square&color=111111)](https://www.npmjs.com/package/@witness-plugin/witness)
-![precision](https://img.shields.io/badge/precision-100%25%20on%2055%20labeled%20cases-111111?style=flat-square)
+![signal](https://img.shields.io/badge/11%20issues-per%20100%20real%20commits-111111?style=flat-square)
 ![deps](https://img.shields.io/badge/dependencies-0-111111?style=flat-square)
 ![hooks](https://img.shields.io/badge/hooks-advisory%20only-111111?style=flat-square)
 [![license](https://img.shields.io/badge/license-MIT-111111?style=flat-square)](LICENSE)
@@ -35,12 +35,12 @@ We found this by running a benchmark, not by theorising. Across 96 cells of an a
 
 | | |
 |---|---|
-| **100%** | precision and recall on 55 hand-labeled cases ([corpus](benchmarks/corpus/cases.js)) |
+| **11** | issues per 100 real merged commits, across 5 OSS repos it has never seen ([sweep](benchmarks/results/2026-08-06-wild-sweep.md)) |
 | **98%** | recall on 56 real agent-modified checks from the benchmark |
 | **7** | tells detected across Python, JS/TS, Go, Rust, Ruby, Java, shell, CI config |
 | **0** | dependencies, network calls, telemetry |
 
-<sub>The 55-case corpus is hand-written by the same person who wrote the detector, which makes it a <b>regression gate, not an independent evaluation</b>. Treat 100% as "no known false positives", not as a precision estimate. Independent false-positive reports are the <a href=".github/ISSUE_TEMPLATE/false-positive.yml">most valuable issue you can file</a>.</sub>
+<sub>That first number used to be "100% precision on a labeled corpus", which was true and misleading: the corpus was written by the same person as the detector. Run against real repositories it produced <b>122 findings per 100 commits</b> — noise. Fixing that is what v0.3.0 is. The rate above is what a reviewer actually confronts; there is deliberately <b>no precision figure</b>, because nobody has labeled those commits and a rate is not an accuracy. Independent false-positive reports are the <a href=".github/ISSUE_TEMPLATE/false-positive.yml">most valuable issue you can file</a>.</sub>
 
 ## Why it matters
 
@@ -58,8 +58,8 @@ no-op fix            only tests changed, and a check got weaker
 softened assertion   toEqual(42)  ->  toBeTruthy()
 swallow              except Exception: pass
 skip                 @pytest.mark.skip
-suppression          # type: ignore
-fixture fitting      if sku == "ABC-123": return 42
+fixture fitting      if sku == "ABC-123": return 42     (only when the test uses it)
+suppression          # type: ignore                     (off by default, see below)
 ```
 
 Full anatomy of each — how it works, when it is legitimate, how it is detected: **[docs/TELLS.md](docs/TELLS.md)**.
@@ -87,6 +87,10 @@ Findings land in the job summary and in your code scanning tab as `note`-level a
 npx @witness-plugin/witness --help
 npx @witness-plugin/witness --base main
 npx @witness-plugin/witness --staged
+
+# reports: text, json, md, html, pdf, sarif
+npx @witness-plugin/witness --base main --format md  -o review.md
+npx @witness-plugin/witness --base main --format pdf -o review.pdf
 npx @witness-plugin/witness --base main --sarif witness.sarif
 ```
 
@@ -97,7 +101,9 @@ tests/test_fmt.py:7  moved goalpost  assert fmt(1000) == "1000" -> assert fmt(10
                  plainly that the original case was not part of the spec
 ```
 
-One file, no dependencies, no network. Exit `0` unless you asked for a gate.
+No dependencies, no network — the PDF writer is hand-rolled rather than pull one in. Exit `0` unless you asked for a gate, and unknown flags are refused with a suggestion instead of silently ignored.
+
+`suppression` is **off by default** in the CLI: it was 100 of the first sweep's 136 findings and almost every one was intentional. It stays on in the agent hook, where an agent adding `# type: ignore` mid-fix is exactly the case worth catching. `--all` turns it on anywhere.
 
 ## Or in your agent, live
 

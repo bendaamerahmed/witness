@@ -1,6 +1,6 @@
 {
   "name": "@witness-plugin/witness",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Proof-of-work mode for AI coding agents. A green check is not evidence. It is a claim.",
   "license": "MIT",
   "author": "Ahmed Ben Daamer",
@@ -39,7 +39,9 @@
     "verify": "npm run check && npm test && npm run precision",
     "scan": "node bin/witness-scan.js",
     "sync": "node scripts/sync-rule-copies.js",
-    "uninstall": "node scripts/uninstall.js"
+    "uninstall": "node scripts/uninstall.js",
+    "wild": "node benchmarks/wild.js",
+    "wild:clone": "node benchmarks/wild.js --clone"
   },
   "engines": {
     "node": ">=18"

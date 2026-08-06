@@ -66,8 +66,17 @@ The scanner is a single Node file with no dependencies and no network access.
 npx @witness-plugin/witness --help          # every flag, with examples
 npx @witness-plugin/witness --base main
 npx @witness-plugin/witness --staged
+npx @witness-plugin/witness --dir before/ --dir after/     # no git needed
+
+# reports
+npx @witness-plugin/witness --base main --format md   -o review.md
+npx @witness-plugin/witness --base main --format html -o review.html
+npx @witness-plugin/witness --base main --format pdf  -o review.pdf
 npx @witness-plugin/witness --base main --sarif witness.sarif
-npx @witness-plugin/witness --dir before/ --dir after/ --json
+
+# rule sets — suppression is off by default, see docs/TELLS.md
+npx @witness-plugin/witness --all
+npx @witness-plugin/witness --rules moved-goalpost,no-op-fix
 ```
 
 `--dir` needs no git repository at all, which is useful for comparing two

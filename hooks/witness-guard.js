@@ -10,7 +10,7 @@
 const fs = require('fs');
 const { readMode, writeHookOutput, readStdin } = require('./witness-runtime');
 const { guardEnabled } = require('./witness-config');
-const { inspectEdit, isSourcePath, isTestPath, isConfigPath } = require('./witness-detect');
+const { inspectEdit, isSourcePath, isTestPath, isConfigPath, applyRules, HOOK_DEFAULT } = require('./witness-detect');
 const ledger = require('./witness-ledger-store');
 
 /** Line number in `filePath` where `needle` begins, or 0 if it cannot be located. */
@@ -87,6 +87,12 @@ function main() {
         findings.push({ ...f, line: f.line + base });
       }
     }
+
+    // The hook keeps `suppression`, which the CLI drops. Different question:
+    // an agent that just added `# type: ignore` while trying to make something
+    // pass is the case this project exists to catch, whereas the same line in a
+    // human pull request is almost always intentional and long-standing.
+    findings = applyRules(findings, HOOK_DEFAULT);
 
     const led = ledger.record(session, {
       paths,

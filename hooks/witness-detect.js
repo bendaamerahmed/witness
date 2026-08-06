@@ -82,6 +82,47 @@ const CODE_EXT = /\.(py|js|jsx|ts|tsx|mjs|cjs|go|rs|rb|java|kt|cs|php|swift|c|h|
 
 const JUSTIFIED = /(?:^|[^\w])witness:\s*\S/i;
 
+/** String and numeric literals, for the fixture-correspondence check. */
+const LITERAL_TOKEN = /(['"])(?:\\.|(?!\1)[^\\])*\1|(?<![\w.])-?\d+(?:\.\d+)?(?![\w.])/g;
+const TRIVIAL_LITERAL = new Set(['0', '1', '-1', '2', '', ' ']);
+const LITERAL_BRANCH = /^\s*(?:if|elif|else if)\s*\(?\s*[\w.[\]'"]+\s*===?\s*(['"][^'"]{1,40}['"]|-?\d+(?:\.\d+)?)\s*\)?\s*[:{]?\s*$/;
+
+function normalizeLiteral(tok) {
+  const t = String(tok).trim();
+  return /^['"]/.test(t) ? t.slice(1, -1) : t;
+}
+
+/**
+ * Rule sets.
+ *
+ * `suppression` is a correct detector and the wrong thing to run over a human
+ * pull request. On 111 real commits it produced 100 of 136 findings, every one
+ * of them a genuine suppression and almost none of them worth a maintainer's
+ * attention: `# noqa: F401` on an intentional re-export, `@ts-expect-error` in a
+ * test whose PURPOSE is asserting a type error, a file-level `eslint-disable` on
+ * a vendored client.
+ *
+ * That is standing debt, which is what `/witness-audit` is for. It is not a
+ * statement about the change under review.
+ *
+ * The hook keeps it, because there the context is different: an agent that just
+ * added `# type: ignore` while trying to make something pass is exactly the case
+ * this project exists to catch.
+ */
+const ALL_TELLS = [
+  'moved goalpost', 'no-op fix', 'softened assertion', 'swallow', 'skip',
+  'suppression', 'fixture fitting',
+];
+const SCANNER_DEFAULT = ALL_TELLS.filter((t) => t !== 'suppression');
+const HOOK_DEFAULT = ALL_TELLS.slice();
+
+/** Filter findings to a rule set. */
+function applyRules(findings, rules) {
+  if (!rules || !rules.length) return findings;
+  const allow = new Set(rules);
+  return findings.filter((f) => allow.has(f.tell));
+}
+
 /** Tells that mean a check got weaker. `no-op fix` is defined in terms of these. */
 const WEAKENING = new Set([
   'softened assertion', 'moved goalpost', 'skip', 'suppression', 'swallow',
@@ -111,9 +152,42 @@ function addedLines(before, after) {
   return out;
 }
 
+/** Lines present in `before` that are gone from `after`, with their `before` index. */
+function removedLinesWithPos(before, after) {
+  return addedLines(after, before);
+}
+
 /** Lines present in `before` that are gone from `after`. */
 function removedLines(before, after) {
-  return addedLines(after, before).map((l) => l.text);
+  return removedLinesWithPos(before, after).map((l) => l.text);
+}
+
+/**
+ * Identifiers a line is actually ABOUT, minus the assertion scaffolding.
+ * Two assertions that share no subject are two different assertions, however
+ * close together they happen to sit.
+ */
+const NOISE_IDENT = new Set([
+  'assert', 'assertEqual', 'assertTrue', 'assertFalse', 'assertIsNotNone', 'expect',
+  'self', 'this', 'it', 'test', 'def', 'is', 'not', 'None', 'null', 'true', 'false',
+  'to', 'toBe', 'toEqual', 'toBeTruthy', 'and', 'or', 'in', 'with', 'as', 'return',
+  'ok', 'equal', 'deepEqual', 'strictEqual', 'should', 'const', 'let', 'var', 'if',
+]);
+
+function subjects(line) {
+  return new Set(
+    (String(line).match(/[A-Za-z_][\w.]*/g) || [])
+      .flatMap((t) => [t, ...t.split('.')])
+      // Single characters count: `assertEqual(x, 42)` -> `assertTrue(x)` is a
+      // textbook softening and `x` is the only subject it has.
+      .filter((t) => t.length >= 1 && !NOISE_IDENT.has(t)),
+  );
+}
+
+function sharesSubject(a, b) {
+  const sa = subjects(a);
+  for (const t of subjects(b)) if (sa.has(t)) return true;
+  return false;
 }
 
 /** A finding is silenced if the line, or either neighbour, carries a `witness:` note. */
@@ -218,20 +292,39 @@ function scanMovedGoalpost(before, after, path) {
 }
 
 /** Softening needs a strict form to have LEFT and a loose form to have ARRIVED. */
+/**
+ * Softening needs a strict form to have LEFT and a loose form to have ARRIVED —
+ * and the two have to plausibly be the same assertion.
+ *
+ * The first version required neither. It paired any removed strict line with any
+ * added loose line anywhere in the file, so a refactored test manufactured
+ * findings out of two unrelated assertions. On 111 real commits it produced
+ * three findings and all three were that bug:
+ *
+ *   -  assert client.get("/get").data == b"42"
+ *   +  assert not request_ctx._session.accessed
+ *
+ * Two conditions now, both necessary. They must sit within SOFTEN_WINDOW lines
+ * of each other, and they must share at least one subject identifier.
+ */
+const SOFTEN_WINDOW = 8;
+
 function scanSoftening(before, after) {
-  const gone = removedLines(before, after);
+  const gone = removedLinesWithPos(before, after);
   const added = addedLines(before, after);
   const found = [];
   for (const rule of STRICT_TO_LOOSE) {
-    const lost = gone.filter((l) => rule.strict.test(l));
+    const lost = gone.filter((l) => rule.strict.test(l.text));
     if (!lost.length) continue;
     for (const { n, text } of added) {
       if (!rule.loose.test(text)) continue;
       if (justifiedAt(after, n)) continue;
+      const near = lost.find((l) => Math.abs(l.n - n) <= SOFTEN_WINDOW && sharesSubject(l.text, text));
+      if (!near) continue;
       found.push({
         tell: 'softened assertion',
         line: n,
-        evidence: `${lost[0].trim().slice(0, 70)} -> ${text.trim().slice(0, 70)}`,
+        evidence: `${near.text.trim().slice(0, 70)} -> ${text.trim().slice(0, 70)}`,
         text: text.trim().slice(0, 160),
       });
       break;
@@ -302,18 +395,51 @@ function inspectChangeSet(edits) {
     });
   }
 
+  // Fixture fitting is a CORRESPONDENCE, not a shape.
+  //
+  // The first version fired on any new branch against a bare literal, which on
+  // 111 real commits meant `if (property === 'destroy')` in a proxy handler and
+  // `if (sessions.length === 0)` in an emptiness check. Branching on a literal
+  // is one of the most common things code does; 24 of 24 findings were wrong.
+  //
+  // What actually distinguishes fitting the fixture is that the literal in the
+  // new branch is the literal the TEST supplies. Without a test in the changeset
+  // to compare against, there is no correspondence to observe and the rule stays
+  // quiet — a miss is cheaper than crying wolf on ordinary logic.
+  const testLiterals = new Set();
+  for (const e of edits) {
+    if (!isTestPath(e.path)) continue;
+    for (const m of String(e.after || '').matchAll(LITERAL_TOKEN)) {
+      testLiterals.add(normalizeLiteral(m[0]));
+    }
+  }
+
   for (const e of edits) {
     if (!isSourcePath(e.path)) continue;
-    for (const { n, text } of addedLines(e.before, e.after)) {
-      // A new equality branch against a bare literal is how fixture fitting looks.
-      const m = text.match(/^\s*(?:if|elif|else if)\s*\(?\s*[\w.[\]'"]+\s*===?\s*(['"][^'"]{1,40}['"]|-?\d+)\s*\)?\s*[:{]?\s*$/);
+    if (!testLiterals.size) continue;
+
+    const added = addedLines(e.before, e.after);
+    // Two or more literal-keyed branches added at once is a dispatch table, not
+    // a special case fitted to one fixture. `if (p === 'destroy')` next to
+    // `if (p === 'setTimeout')` is a proxy handler doing its job, and it fired
+    // three times in a single real file before this guard existed.
+    const branchCount = added.filter((l) => LITERAL_BRANCH.test(l.text)).length;
+    if (branchCount > 1) continue;
+
+    for (const { n, text } of added) {
+      const m = text.match(LITERAL_BRANCH);
       if (!m) continue;
+      const lit = normalizeLiteral(m[1]);
+      // Trivial literals are everywhere. 0, 1, -1 and "" are emptiness and
+      // boundary checks far more often than they are fixtures.
+      if (TRIVIAL_LITERAL.has(lit)) continue;
+      if (!testLiterals.has(lit)) continue;
       if (justifiedAt(e.after, n)) continue;
       out.push({
         tell: 'fixture fitting',
         line: n,
         path: e.path,
-        evidence: `new branch keyed on the literal ${m[1]}`,
+        evidence: `new branch keyed on ${m[1]}, which is the value the test supplies`,
         text: text.trim().slice(0, 160),
       });
     }
@@ -351,6 +477,10 @@ function renderAdvisory(findings, { mode = 'full' } = {}) {
 }
 
 module.exports = {
+  ALL_TELLS,
+  SCANNER_DEFAULT,
+  HOOK_DEFAULT,
+  applyRules,
   WEAKENING,
   inspectEdit,
   scanMovedGoalpost,

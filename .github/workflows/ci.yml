@@ -38,6 +38,18 @@ jobs:
       - name: Detector precision and recall
         run: node benchmarks/precision.js --gate
 
+      - name: Report formats all render
+        run: |
+          node -e "
+            const r = require('./lib/report');
+            const F = [{tell:'moved goalpost',path:'a.py',line:1,evidence:'x -> y'}];
+            for (const f of r.FORMATS) {
+              const out = r.render(f, F, {filesChanged:1});
+              if (!out || out.length < 40) { console.error('empty output for', f); process.exit(1); }
+            }
+            console.log('all', r.FORMATS.length, 'formats render');
+          "
+
   instrument:
     name: benchmark instrument selftest
     runs-on: ubuntu-latest

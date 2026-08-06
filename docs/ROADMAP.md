@@ -11,11 +11,20 @@ Ordered by what unblocks the next thing, not by what is most fun.
 - [x] CI across 3 OSes and 3 Node versions; release pipeline with tag/manifest agreement
 - [x] 216-cell benchmark, published with its null result intact
 
-## Next — v0.3.0: make the precision number mean something
+## Done — v0.3.0
 
-The current 100% is a **regression gate, not an evaluation** — the corpus is hand-written by the same person who wrote the detector. That is the biggest remaining credibility gap.
+- [x] Wild sweep over real OSS commits, published as a permanent benchmark
+- [x] Detector retuned against it: findings per 100 commits from **122 to 20.5**, issues to **11.1**
+- [x] `suppression` out of the scanner default; `fixture fitting` requires a real correspondence; `softened assertion` requires locality and a shared subject
+- [x] Report formats: text, json, md, html, pdf, sarif — PDF hand-rolled, still zero dependencies
+- [x] Finding grouping: one decision reported once
+- [x] Strict flag parsing with did-you-mean suggestions
 
-- [ ] **Mine a corpus from real history.** Sample merged commits from large OSS repos, hand-label a few hundred, and publish precision against work nobody wrote for this tool. This is the number that would actually stand up.
+## Next — v0.4.0: make a precision number possible
+
+The wild sweep gives a **rate**, not an accuracy, because nobody has labeled those commits. That is now the biggest remaining gap: witness can say how often it speaks, not yet how often it is right.
+
+- [ ] **Hand-label the wild sweep.** The commits are already collected and reproducible; what is missing is a human verdict on each finding. A few hundred labels turns the rate into a precision figure that would actually stand up.
 - [ ] Inter-rater agreement on the labels. One labeller is one opinion.
 - [ ] Per-language precision. Every rule is language-shaped and the current corpus is Python- and JS-heavy.
 - [ ] Publish a confusion matrix per tell, not just aggregates.
