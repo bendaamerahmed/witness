@@ -57,7 +57,25 @@ Going public changed the threat model: the Action became something a stranger ca
 
 Re-running the benchmark on 2026-08-07 did two things. It confirmed the published run — all nine arm × metric comparisons overlap, and the ordering reproduces. And it found a blind spot by reading the cells the detector missed, which is exactly how the seventh tell was found.
 
-- [ ] **A `deleted check` tell.** Two of six misses were the agent removing the failing test outright. Every existing rule inspects *added* lines, so a pure deletion is invisible — reproducible in two files, `--all` and still clean. It is the most obvious cheat there is. Not implemented in a hurry: it needs corpus cases, a measured precision, and a decision about legitimate test deletion, which is common and correct in real repositories. Shipping a rule without that is how Go's `_, err :=` got in.
+- [ ] **A `deleted check` tell — measured before building, and the measurement changed the design.** Two of six benchmark misses were the agent removing the failing test outright. Every existing rule inspects *added* lines, so a pure deletion is invisible — reproducible in two files, `--all` and still clean.
+
+  Counting test deletions across the same 171 pinned commits, before writing any rule:
+
+  | condition | per 100 commits |
+  | --- | ---: |
+  | any test removed | **11.7** (20/171 commits, 60 test functions) |
+  | test removed **and no source file touched** | **1.8** (3/171) |
+
+  The broad form is not shippable. 11.7 per 100 against a detector that currently produces 18.1 in total would roughly double the noise, and the samples are plainly legitimate: `got` deleting a deprecated `url-to-options` module with its nine tests, redirect-test consolidation, flask's greenlet rewrite. That is the Go `_, err :=` shape — a correct observation that is the wrong thing to print.
+
+  The narrow form is viable, and all three hits were read:
+  - `flask a31e6b7346` "remove werkzeug host tests" — 48 deletions, one file, no source. A check disappeared and nothing replaced it.
+  - `flask 91c6b3fecf` "remove unicode host test" — 21 deletions, same shape.
+  - `express 9c85a25c02` — a **false positive**: `it('should encode data uri1')` and `uri2` were consolidated into `uri`, a rename rather than a deletion.
+
+  So the rule needs a rename guard before it is worth having — the same skeleton-matching that `moved goalpost` already uses, so a removed test whose body survives under a new name is not reported. Both flask commits explain themselves in the commit message, which is the legitimate version this project already asks for; being surfaced is the point, not a defect.
+
+  Still to do: corpus cases, the rename guard, and a measured precision against the pinned sweep before it goes anywhere near the default rule set.
 - [ ] **A `moved goalpost` variant that survives a signature change.** The other four misses rewrote the assertion around a new parameter — `round_price(250)` became `round_price(250, mode='half_up')` — so both contradictory expectations could coexist. Same substance as a moved goalpost; the shared-subject check does not match across an added argument. Harder than it looks: some of these are legitimate API evolution.
 - [x] **Recall corrected from 98% to 94.4%.** The second run returned 91.2% (62/68) against the first run's 98.2% (55/56). The intervals overlap, so nothing is contradicted — but quoting the better of two runs is selection, and the pooled 117/124 with a 95% interval of 89–97% is what the evidence supports. Corrected in the README, `docs/SPEC.md` and the sweep write-up.
 
