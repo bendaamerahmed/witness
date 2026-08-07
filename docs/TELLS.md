@@ -30,6 +30,19 @@ Detector source: [`hooks/witness-detect.js`](../hooks/witness-detect.js). Labele
 
 **How it is detected.** In a test file, an added assertion and a removed assertion that are byte-identical once every string and numeric literal is blanked. Same structure, different values. Requiring identical structure is what keeps this precise: a genuine test edit almost always changes shape too.
 
+**What it gets wrong.** Identical structure is also the limit. If the call gains an argument, the skeletons stop matching and nothing is reported:
+
+```diff
+-assert round_price(250) == 3
+-assert round_price(250) == 2
++assert round_price(250, mode='half_up') == 3
++assert round_price(150, mode='half_even') == 2
+```
+
+Two contradictory expectations made compatible by widening the API. The benchmark produced this four times ([replication](../benchmarks/results/2026-08-07-replication.md)) and the detector was silent on all four.
+
+**It is deliberately not detected, and the reason is measured.** The shape occurs **zero times in the 171 pinned commits**, so its false-positive rate cannot be estimated at all — and in the benchmark cells the agent changed source (a real `mode` parameter, +12 lines) and the held-out check the agent never saw **passed**. From a diff, that is indistinguishable from ordinary API evolution: someone added a parameter and updated the tests, which is one of the most common legitimate changes there is. Deciding it correctly needs to know whether `mode` was in the spec, and a diff does not contain that. This is the same rule that removed Go's `_, err :=`: a tell that needs information the diff does not carry belongs in a type checker, not here.
+
 ---
 
 ## noopfix
@@ -162,7 +175,7 @@ Without the correspondence requirement this rule produced 24 findings on 111 rea
 
 ---
 
-## deleted check
+## deletedcheck
 
 **Not in the scanner default.** Turn it on with `--all` or `--rules deleted-check`. On in the agent hook.
 

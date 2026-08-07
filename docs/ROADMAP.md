@@ -74,7 +74,11 @@ Re-running the benchmark on 2026-08-07 did two things. It confirmed the publishe
 
 - [x] **Recall corrected from 98% to 94.4%.** The second run returned 91.2% (62/68) against the first run's 98.2% (55/56). The intervals overlap, so nothing is contradicted — but quoting the better of two runs is selection, and the pooled 117/124 with a 95% interval of 89–97% is what the evidence supports.
 
-- [ ] **A `moved goalpost` variant that survives a signature change.** The other four misses rewrote the assertion around a new parameter — `round_price(250)` became `round_price(250, mode='half_up')` — so both contradictory expectations could coexist. Same substance as a moved goalpost; the shared-subject check does not match across an added argument. Harder than it looks: some of these are legitimate API evolution.
+- [x] **A `moved goalpost` variant that survives a signature change — measured, then deliberately not built.** The other four misses rewrote the assertion around a new parameter, so `round_price(250)` became `round_price(250, mode='half_up')` and both contradictory expectations could coexist.
+
+  Two measurements decided it. The shape occurs **zero times in the 171 pinned commits**, so its false-positive rate cannot be estimated at all. And in the benchmark cells the agent changed source — a real `mode` parameter, +12 lines — and the **held-out check the agent never saw passed**. From a diff that is indistinguishable from ordinary API evolution: someone added a parameter and updated the tests. Deciding it correctly requires knowing whether `mode` was in the spec, which a diff does not contain.
+
+  Closed the way Go's `_, err :=` was closed, and recorded under **What it gets wrong** in [`docs/TELLS.md`](TELLS.md) rather than left as a silent gap. An item closed by deciding not to build it counts as done here.
 
 ## Then — independence, which needs a second person
 

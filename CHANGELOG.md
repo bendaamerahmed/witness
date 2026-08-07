@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.1] — 2026-08-07
+
+### Fixed
+
+- **Two SARIF `helpUri` links have pointed at headings that do not exist since v0.2.0.** The anchor was built from the rule's display name, so `SwallowedError` produced `#swallowederror` and `SkippedTest` produced `#skippedtest`, while `docs/TELLS.md` is organised by tell — `## swallow`, `## skip`. GitHub renders that link in every code scanning alert, and a missing anchor lands silently at the top of the page rather than erroring. The anchor is now keyed on the tell, and all eight resolve. `deleted check` shipped in 0.6.0 with the same mismatch, which is how this was found.
+- A test now reads the anchor **off the emitted `helpUri`** and asserts a matching heading exists, rather than re-deriving it — a test that recomputes the value it is checking agrees with a broken generator.
+
+### Changed
+
+- **The `moved goalpost` signature-change variant is decided against, not deferred.** The four remaining benchmark misses widened the API — `round_price(250)` became `round_price(250, mode='half_up')` — so two contradictory expectations could both hold. It occurs **zero times in the 171 pinned commits**, so its false-positive rate cannot be estimated; and in the benchmark cells the agent changed source and the held-out check it never saw **passed**, making it indistinguishable from ordinary API evolution without knowing the spec. Closed the way Go's `_, err :=` was closed, and written up under **What it gets wrong** in `docs/TELLS.md` rather than left as a silent gap.
+
 ## [0.6.0] — 2026-08-07
 
 An eighth tell, found the way the seventh was: by re-running the benchmark and reading the cells the detector missed.

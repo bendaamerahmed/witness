@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
-const { toSarif, RULES, uriFor } = require('../lib/sarif');
+const { toSarif, RULES, uriFor, rulesArray } = require('../lib/sarif');
 const { ASK, ALL_TELLS } = require('../hooks/witness-detect');
 
 const sample = [
@@ -18,6 +18,27 @@ test('emits a structurally valid SARIF 2.1.0 document', () => {
   assert.strictEqual(run.tool.driver.name, 'witness');
   assert.match(run.tool.driver.semanticVersion, /^\d+\.\d+\.\d+$/);
   assert.strictEqual(run.results.length, 2);
+});
+
+test('every rule helpUri points at a heading that exists in TELLS.md', () => {
+  // helpUri is built from `name.toLowerCase()`, so the headings are `## movedgoalpost`
+  // rather than `## moved goalpost`. GitHub renders the link in code scanning; a
+  // heading that does not match sends the reader to the top of the document with
+  // no error anywhere. `deleted check` shipped with exactly that mismatch.
+  const fs = require('fs');
+  const path = require('path');
+  const tells = fs.readFileSync(path.join(__dirname, '..', 'docs', 'TELLS.md'), 'utf8');
+  const headings = new Set(
+    [...tells.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim().toLowerCase().replace(/[^a-z0-9]/g, '')),
+  );
+  // Read the anchor off the emitted helpUri rather than re-deriving it here,
+  // so the test cannot agree with a broken generator by making the same mistake.
+  for (const rule of rulesArray()) {
+    const anchor = String(rule.helpUri).split('#')[1] || '';
+    assert.ok(anchor, `${rule.id} has no helpUri anchor at all`);
+    assert.ok(headings.has(anchor),
+      `${rule.id} helpUri anchor "#${anchor}" has no matching heading in docs/TELLS.md`);
+  }
 });
 
 test('every tell has a declared rule, so no result is ever orphaned', () => {
