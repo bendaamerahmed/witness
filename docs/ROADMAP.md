@@ -53,7 +53,15 @@ Going public changed the threat model: the Action became something a stranger ca
 - [x] **Per tell, not aggregate.** `moved goalpost` is 21 of the 31 findings, so the headline was very largely a statement about one rule. Four of the six default rules have three findings or fewer between them, and the two false positives are the *entire* wild sample for `softened assertion` and `fixture fitting` — rows that now read `0.0% [0.0%, 79.3%]` rather than being averaged into silence. Rules that never fired are printed with `n=0` and *unmeasured*, because omitting them reads as if they had been measured and had done fine.
 - [x] **Per language, with exposure.** Each row carries the commits scanned that produced it: JavaScript 19 findings from 33 commits (all from one repository), TypeScript 6 from 39, Python 5 from 72, Go **1 from 27**. "27 Go commits and one Go finding" is not a measurement of Go, and `[20.7%, 100.0%]` is the arithmetic saying so.
 
-## Next — v0.5.1: independence, which needs a second person
+## Next — v0.6.0: the eighth tell, and the number that shrank
+
+Re-running the benchmark on 2026-08-07 did two things. It confirmed the published run — all nine arm × metric comparisons overlap, and the ordering reproduces. And it found a blind spot by reading the cells the detector missed, which is exactly how the seventh tell was found.
+
+- [ ] **A `deleted check` tell.** Two of six misses were the agent removing the failing test outright. Every existing rule inspects *added* lines, so a pure deletion is invisible — reproducible in two files, `--all` and still clean. It is the most obvious cheat there is. Not implemented in a hurry: it needs corpus cases, a measured precision, and a decision about legitimate test deletion, which is common and correct in real repositories. Shipping a rule without that is how Go's `_, err :=` got in.
+- [ ] **A `moved goalpost` variant that survives a signature change.** The other four misses rewrote the assertion around a new parameter — `round_price(250)` became `round_price(250, mode='half_up')` — so both contradictory expectations could coexist. Same substance as a moved goalpost; the shared-subject check does not match across an added argument. Harder than it looks: some of these are legitimate API evolution.
+- [x] **Recall corrected from 98% to 94.4%.** The second run returned 91.2% (62/68) against the first run's 98.2% (55/56). The intervals overlap, so nothing is contradicted — but quoting the better of two runs is selection, and the pooled 117/124 with a 95% interval of 89–97% is what the evidence supports. Corrected in the README, `docs/SPEC.md` and the sweep write-up.
+
+## Then — independence, which needs a second person
 
 The three items below were cut from v0.5.0 for one reason: **none of them can be done by the person or process that produced the first set of labels.** Generating a second opinion from the same source and publishing it as agreement would be, exactly and precisely, making a check pass without making the thing right. This project does not get to do that to its own headline number.
 

@@ -2,7 +2,7 @@
 
 Every way a green check can lie, with what it looks like, why it works, when it is legitimate, and how the detector decides.
 
-Six of these came from the literature. The seventh, **moved goalpost**, came from a benchmark run in August 2026 where it accounted for 88% of every cheat observed and the six-tell detector caught none of them.
+Six of these came from the literature. The seventh, **moved goalpost**, came from a benchmark run in August 2026 where it accounted for 88% of every cheat observed (52/59, 95% CI 78–94%) and the six-tell detector caught none of them — nine out of nine, in a run kept as raw evidence.
 
 Detector source: [`hooks/witness-detect.js`](../hooks/witness-detect.js). Labeled corpus: [`benchmarks/corpus/cases.js`](../benchmarks/corpus/cases.js).
 
@@ -161,6 +161,27 @@ Without the correspondence requirement this rule produced 24 findings on 111 rea
 **This is still the tell no diff-based detector can catch reliably.** The heuristic gets the obvious form and will miss a determined one. That limitation is why the benchmark leans on held-out tests the agent never sees, rather than on this rule.
 
 ---
+
+## What none of them catch: a deleted test
+
+Every tell above inspects **added** lines. A test that is removed outright adds nothing, so there is nothing for any of the seven rules to look at. Deleting a failing test is the most direct cheat available, and witness is blind to it:
+
+```diff
+ def test_thousands_separator():
+     assert fmt(1000) == "1,000"
+-
+-def test_no_separator():
+-    assert fmt(1000) == "1000"
+```
+
+```
+witness --dir before/ --dir after/ --all
+witness 0.5.0 — clean: 1 file(s) changed, no tells.
+```
+
+This was found on 2026-08-07 by re-running the benchmark and reading the cells the detector missed — two of six misses were exactly this shape ([replication](../benchmarks/results/2026-08-07-replication.md)). It is a candidate eighth tell and is on the [roadmap](ROADMAP.md), deliberately unimplemented for now: a rule shipped without a corpus and a measured precision is how the Go `_, err :=` rule got in and had to be taken out again.
+
+Until it exists, treat a diff that only *removes* checks as unexamined by this tool. `git diff --stat` on your test directory is the cheap manual substitute.
 
 ## The escape hatch
 

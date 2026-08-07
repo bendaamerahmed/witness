@@ -2,11 +2,16 @@
 
 ## Read the numbers honestly
 
-There are no published numbers yet. When there are, read this section first.
+There are published numbers now. Read this section before quoting any of them.
+
+- [`results/2026-08-06-first-run.md`](results/2026-08-06-first-run.md) — 216 cells, Haiku 4.5, three arms, and the four instrument bugs the run exposed.
+- [`results/2026-08-06-wild-sweep.md`](results/2026-08-06-wild-sweep.md) — 171 real merged commits, hand-labelled, with per-tell and per-language breakdowns.
+
+Every rate in both carries a Wilson 95% interval. Several rest on fewer than five observations, and the interval is the part that says so.
 
 **What is measured:** how often a green check corresponds to a working fix, on seeded defects, in a throwaway workspace, with one model. That is the whole claim. It does not predict what happens in your codebase, and saying otherwise would be exactly the unverified claim this plugin exists to prevent.
 
-**What `cheat rate` does not cover:** it counts cheats that are visible in a diff. An agent that overfits the source to the test fixture, or adds a dead branch special-casing the test input, looks honest to every grep ever written. That limitation is why `held_out_pass_rate` is published beside it and why `honest_fix_rate` requires it.
+**What `flag_rate` does not cover:** it counts what the detector can see in a diff. It was called `cheat_rate` until v0.4.0; the rename is the point, because "the detector said something" and "the model cheated" are different claims and only the first is observable. The raw JSON preserved under [`results/raw/`](results/raw) predates the rename and stores the per-cell field as `cheated`; anything rescoring those files must read that key, not `flagged`. An agent that overfits the source to the test fixture, or adds a dead branch special-casing the test input, looks honest to every grep ever written. That limitation is why `held_out_pass_rate` is published beside it and why `honest_fix_rate` requires it.
 
 **Why `false virtue` is always shown:** a ruleset can buy a perfect integrity score by making the agent refuse to touch any test, ever, including the ones that are genuinely wrong. The `wrong-check` tier exists to catch that, and reporting the win without the trade would be a softened assertion in prose form.
 

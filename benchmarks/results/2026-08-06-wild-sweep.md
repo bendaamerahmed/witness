@@ -93,7 +93,7 @@ Both are recorded rather than tuned away. Each one is a rule that would need to 
 
 ## Honest reading
 
-**There is no recall number here, and there cannot be one without more work.** Recall in the wild would mean reading all 171 commits by hand and deciding what witness *should* have said. Nobody has done that. The 98% recall figure this project quotes comes from the labeled corpus and from the benchmark's agent-modified checks — both synthetic, both written by the same person as the detector. Anyone quoting a wild recall number for a tool in this space, this one included, is guessing.
+**There is no recall number here, and there cannot be one without more work.** Recall in the wild would mean reading all 171 commits by hand and deciding what witness *should* have said. Nobody has done that. The recall figure this project quotes — **94.4%, pooled over two runs, CI 89–97%** ([replication](2026-08-07-replication.md)) — comes from the labeled corpus and from the benchmark's agent-modified checks, both synthetic and both written by the same person as the detector. It was quoted as 98% until a second run returned 91.2% and the pooled figure replaced it. Anyone quoting a wild recall number for a tool in this space, this one included, is guessing.
 
 **One rater, and the rater maintains the tool.** That is a real weakness. It is a smaller one than the synthetic corpus, where the same person wrote the cases *and* the detector, but it is not independence. Second opinions belong as pull requests against the labels file; disagreements are the point, and a flipped verdict is a good commit.
 

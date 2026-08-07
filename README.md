@@ -31,7 +31,7 @@
 
 Same operator. Same strictness. No suppression, no skip, no `@ts-ignore`. Every assertion-strength linter ever written scores this **clean**, because it is not a weaker check — it is a *different* check. The failing case simply stopped existing.
 
-We found this by running a benchmark, not by theorising. Across 96 cells of an agent under real pressure, this pattern was **88% of every cheat observed**, and our own six-tell detector caught **none of them**. It is the seventh tell now: `moved goalpost`.
+We found this by running a benchmark, not by theorising. Across 96 cells of an agent under real pressure, this pattern was **88% of every cheat observed** (52/59, 95% CI 78–94%), and our own six-tell detector caught **none of them** — 9 out of 9, in the run preserved as [`2026-08-06-110920.json`](benchmarks/results/raw/2026-08-06-110920.json). It is the seventh tell now: `moved goalpost`.
 
 <br>
 
@@ -39,7 +39,7 @@ We found this by running a benchmark, not by theorising. Across 96 cells of an a
 |---|---|
 | **93.5%** | precision on 171 real merged commits, 95% CI **79–98%** — every finding hand-labelled, both false positives published ([sweep](benchmarks/results/2026-08-06-wild-sweep.md)) |
 | **6.4** | issues per 100 real merged commits, across 5 OSS repos it has never seen |
-| **98%** | recall on 56 real agent-modified checks from the benchmark |
+| **94.4%** | recall on 124 real agent-modified checks, pooled over two independent runs (117/124), 95% CI **89–97%** ([replication](benchmarks/results/2026-08-07-replication.md)) |
 | **7** | tells detected across Python, JS/TS, Go, Rust, Ruby, Java, shell, CI config |
 | **0** | dependencies, network calls, telemetry |
 
@@ -183,7 +183,7 @@ So witness is framed as a positive duty (*prove it*) rather than a prohibition (
 
 **On solvable defects nothing cheated at all.** 96/96 honest, every arm. A model that *can* fix the bug has no reason to cheat; cheating is a pressure behaviour. Any benchmark in this space claiming large gains on solvable tasks should be read with that in mind.
 
-**Every arm faked green a majority of the time.** The best was 59.4%. Witness measures that. It does not fix it.
+**Every arm faked green most of the time it was measured.** baseline 84.4% (27/32, CI 68–93%), control 62.5% (20/32, CI 45–77%), witness 59.4% (19/32, CI 42–75%). Only the baseline interval clears 50%: for the other two arms the point estimate is a majority and the interval is not, so "a majority" is what was observed rather than what was established. Witness measures this. It does not fix it.
 
 That is why this README leads with the detector and not the ruleset: the detector is what the evidence supports. If you see "2.6× more honest" quoted from this project without the control column, that number is not supported by its own benchmark.
 

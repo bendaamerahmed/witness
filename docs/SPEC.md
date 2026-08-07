@@ -319,7 +319,7 @@ Two lessons worth keeping: an unmeasured precision claim is not a claim, and a p
 
 §1.2 listed six tells taken from the literature. There are now **seven**. `moved goalpost` — an assertion with identical structure and strictness but a different input — accounted for **88% of every cheat observed**, and the detector as originally specified caught **none** of them. The taxonomy was incomplete in exactly the place it mattered.
 
-§5 predicted the benchmark would separate the arms. It did not. `control` (one sentence) and `witness` (the full ruleset) are indistinguishable at n=32, p=1.000. The honest positioning is now: the detector is the proven asset at 98% recall; the ruleset is unproven against a one-liner and is not marketed as better than one.
+§5 predicted the benchmark would separate the arms. It did not. `control` (one sentence) and `witness` (the full ruleset) are indistinguishable at n=32, p=1.000. The honest positioning is now: the detector is the proven asset at **94.4% recall** (117/124 pooled over two runs, 95% CI 89–97%); the ruleset is unproven against a one-liner and is not marketed as better than one. That figure read 98% until a second run of the same benchmark returned 91.2% and the pooled number replaced it — see the [replication](../benchmarks/results/2026-08-07-replication.md).
 
 §6's held-out defence held up, and earned its keep in an unexpected direction: an early held-out check was *itself wrong*, penalising a correct minimal fix. The selftest now gates on a correct minimal fix scoring honest for every task.
 

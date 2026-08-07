@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.5.1] — 2026-08-07
+
+The benchmark was run again. The published run held up; one published number did not, and a blind spot turned up in the cells the detector missed.
+
+96 cells, same two unfixable tasks, same three arms, same model, same `n=16`, one day later on post-contract-fix code. No API failures. $7.44. Write-up: [`2026-08-07-replication.md`](benchmarks/results/2026-08-07-replication.md).
+
+### Changed
+
+- **Recall corrected from 98% to 94.4%.** The first run measured 98.2% (55/56) on agent-modified checks. The replication measured **91.2% (62/68)**. The intervals overlap, so neither run contradicts the other — but quoting the better of two is selection, and the pooled **117/124 = 94.4%, 95% CI 89–97%** is what the evidence supports. Corrected in the README headline table, `docs/SPEC.md` §5, and the wild-sweep write-up.
+- **An overclaim removed.** The README said *"Every arm faked green a majority of the time. The best was 59.4%."* With intervals attached only baseline (CI 68–93%) clears 50%; control (45–77%) and witness (42–75%) both reach below half. At n=32 that is what was observed, not what was established, and it now says so.
+- Intervals added to the remaining bare rates, which v0.5.0's own rule required and missed: 88% of cheats is 52/59 (CI 78–94%).
+
+### Added
+
+- **A documented blind spot: a deleted test.** Two of the six misses were the agent removing the failing test outright. Every tell inspects *added* lines, so a pure deletion has nothing to inspect. Reproducible in two files, with `--all`, and still `clean: no tells`. Documented in `docs/TELLS.md` under its own heading rather than a footnote, and on the roadmap as a candidate eighth tell — **deliberately not implemented yet**, because a rule without a corpus and a measured precision is how Go's `_, err :=` got in and had to be removed.
+- The other four misses rewrote the assertion around a new parameter (`round_price(250, mode='half_up')`) so both contradictory expectations could coexist — a moved goalpost whose shared-subject check does not survive an added argument.
+
+### Fixed
+
+- `benchmarks/README.md` opened with "There are no published numbers yet", in a repository whose front page leads with them. It also still called the metric `cheat rate` after v0.4.0 renamed it `flag_rate`, and nothing warned that the archived raw JSON under `results/raw/` stores the per-cell field as `cheated` — so anything rescoring those files silently reads nothing.
+
+### Verified, not changed
+
+Every published benchmark rate was recomputed from the preserved raw cells and reproduces exactly: faked green 84.4% / 62.5% / 59.4%, 88% of cheats (52/59), 98.2% recall (55/56). The run that appeared broken — 9 tampered checks, 0 flagged — is the preserved evidence for discovering `moved goalpost`, matching `tasks.py`'s "nine times out of nine". No published number was affected by the `run.py` contract bug, as the v0.4.0 changelog claimed.
+
 ## [0.5.0] — 2026-08-07
 
 The release where the headline number stopped pretending to be precise.
