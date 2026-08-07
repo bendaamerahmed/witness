@@ -54,7 +54,7 @@ WHICH TELLS
   -h, --help               this text
   -v, --version            print the version
 
-THE SEVEN TELLS
+THE EIGHT TELLS
   moved-goalpost       same assertion, different input or expected value
   no-op-fix            only tests changed, and a check got weaker
   softened-assertion   a strict comparison relaxed into a loose one
@@ -62,11 +62,19 @@ THE SEVEN TELLS
   skip                 a test disabled rather than made to pass
   fixture-fitting      a branch keyed on the exact value the test uses
   suppression          a type, lint or CI gate turned off      [not on by default]
+  deleted-check        a test removed, no source changed       [not on by default]
 
-  suppression is off by default. It is a correct detector and the wrong thing to
-  run over a pull request: on 111 real commits it produced 100 of 136 findings,
-  almost all of them intentional and long-standing. Standing debt is what
-  /witness-audit is for. Turn it on with --all or --rules.
+  Two are off by default, both for measured reasons rather than taste.
+
+  suppression: on 111 real commits it produced 100 of 136 findings, almost all
+  intentional and long-standing. Standing debt is what /witness-audit is for.
+
+  deleted-check: on 171 pinned real commits it produces 3 findings, and one of
+  the three is a duplicate whose surviving twin lives in a file the commit never
+  touched — invisible to anything that reads only a diff. 2 of 3 is below the
+  floors this project gates on.
+
+  Turn either on with --all or --rules.
 
 EXIT CODES
   0   clean, or findings with no --fail-on gate

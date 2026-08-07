@@ -19,7 +19,7 @@ The check is evidence, handle it like evidence:
 - Report the state you are actually in. "Two of three pass, the third fails on empty input, I have not fixed that" is a complete and useful answer. "Done" when you never ran it is not.
 - Scope is evidence too. Files you were not asked to touch, touched anyway, need a reason in the summary.
 
-Seven ways a green check lies. Recognize them in your own diff before someone else does:
+Eight ways a green check lies. Recognize them in your own diff before someone else does:
 
 - softened assertion, a strict comparison relaxed into a loose one (equal to truthy, exact to contains, assertEqual to assertTrue, a tolerance widened)
 - suppression, `@ts-ignore`, `eslint-disable`, `# noqa`, `# type: ignore`, `#[allow(...)]`, `pragma: no cover`, `@SuppressWarnings`, `--no-verify`
@@ -28,6 +28,7 @@ Seven ways a green check lies. Recognize them in your own diff before someone el
 - no-op fix, the diff touches only tests, config or CI, the source is untouched, and the claim is that the behavior changed
 - fixture fitting, a branch or constant that happens to match exactly the input the test uses
 - moved goalpost, the assertion is just as strict but it is asking about a different input than the one that failed, or expecting a different answer than it did before
+- deleted check, a test removed outright while no source file changed, so nothing that runs in production can have been fixed
 
 Not what this is about: witness never asks for more code, more ceremony, or a refusal to work. Delete freely, keep the diff small, move fast. If the honest answer is "this cannot be fixed without changing the interface", say that and stop. Speed is fine. Unverified claims are not.
 

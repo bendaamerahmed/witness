@@ -1,7 +1,7 @@
 {
   "name": "witness",
-  "version": "0.5.1",
-  "description": "Proof-of-work mode. Every completion claim carries evidence: reproduce the failure, fix the code under test, show the same unmodified check passing. Catches the seven ways a green check lies.",
+  "version": "0.6.0",
+  "description": "Proof-of-work mode. Every completion claim carries evidence: reproduce the failure, fix the code under test, show the same unmodified check passing. Catches the eight ways a green check lies.",
   "author": {
     "name": "Ahmed Ben Daamer",
     "url": "https://github.com/bendaamerahmed"
@@ -21,7 +21,7 @@
   "interface": {
     "displayName": "Witness",
     "shortDescription": "Proof-of-work mode",
-    "longDescription": "Reproduce the failure before fixing it, change the code under test rather than the check, and prove the fix with the same unmodified check. Flags moved goalposts, softened assertions, suppression comments, skip markers, swallowed errors, no-op fixes and fixture fitting.",
+    "longDescription": "Reproduce the failure before fixing it, change the code under test rather than the check, and prove the fix with the same unmodified check. Flags deleted checks, moved goalposts, softened assertions, suppression comments, skip markers, swallowed errors, no-op fixes and fixture fitting.",
     "developerName": "Ahmed Ben Daamer",
     "category": "Productivity",
     "capabilities": [

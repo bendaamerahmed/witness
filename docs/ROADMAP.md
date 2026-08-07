@@ -53,31 +53,28 @@ Going public changed the threat model: the Action became something a stranger ca
 - [x] **Per tell, not aggregate.** `moved goalpost` is 21 of the 31 findings, so the headline was very largely a statement about one rule. Four of the six default rules have three findings or fewer between them, and the two false positives are the *entire* wild sample for `softened assertion` and `fixture fitting` — rows that now read `0.0% [0.0%, 79.3%]` rather than being averaged into silence. Rules that never fired are printed with `n=0` and *unmeasured*, because omitting them reads as if they had been measured and had done fine.
 - [x] **Per language, with exposure.** Each row carries the commits scanned that produced it: JavaScript 19 findings from 33 commits (all from one repository), TypeScript 6 from 39, Python 5 from 72, Go **1 from 27**. "27 Go commits and one Go finding" is not a measurement of Go, and `[20.7%, 100.0%]` is the arithmetic saying so.
 
-## Next — v0.6.0: the eighth tell, and the number that shrank
+## Done — v0.6.0: the eighth tell, and the number that shrank
 
 Re-running the benchmark on 2026-08-07 did two things. It confirmed the published run — all nine arm × metric comparisons overlap, and the ordering reproduces. And it found a blind spot by reading the cells the detector missed, which is exactly how the seventh tell was found.
 
-- [ ] **A `deleted check` tell — measured before building, and the measurement changed the design.** Two of six benchmark misses were the agent removing the failing test outright. Every existing rule inspects *added* lines, so a pure deletion is invisible — reproducible in two files, `--all` and still clean.
+- [x] **`deleted check`, the eighth tell.** Two of six misses were the agent removing the failing test outright. Every other rule inspects *added* lines, so a pure deletion left nothing to inspect.
 
-  Counting test deletions across the same 171 pinned commits, before writing any rule:
+  The width was measured across the 171 pinned commits **before** the rule was written:
 
   | condition | per 100 commits |
   | --- | ---: |
   | any test removed | **11.7** (20/171 commits, 60 test functions) |
   | test removed **and no source file touched** | **1.8** (3/171) |
 
-  The broad form is not shippable. 11.7 per 100 against a detector that currently produces 18.1 in total would roughly double the noise, and the samples are plainly legitimate: `got` deleting a deprecated `url-to-options` module with its nine tests, redirect-test consolidation, flask's greenlet rewrite. That is the Go `_, err :=` shape — a correct observation that is the wrong thing to print.
+  The broad form was never built. 11.7 per 100 against a detector producing 18.1 in total would roughly double the noise, and the hits are ordinary work: `got` dropping a deprecated module with its nine tests, redirect tests consolidated, flask's greenlet rewrite. That is the Go `_, err :=` shape — a correct observation that is the wrong thing to print.
 
-  The narrow form is viable, and all three hits were read:
-  - `flask a31e6b7346` "remove werkzeug host tests" — 48 deletions, one file, no source. A check disappeared and nothing replaced it.
-  - `flask 91c6b3fecf` "remove unicode host test" — 21 deletions, same shape.
-  - `express 9c85a25c02` — a **false positive**: `it('should encode data uri1')` and `uri2` were consolidated into `uri`, a rename rather than a deletion.
+  The rule that shipped requires both halves, and carries a rename guard: a test whose name survives with trailing digits changed, or whose body survives verbatim under a new name, is a rename rather than a deletion. Bodies are compared raw, because blanking literals would make `assert fmt(1000) == "1,000"` and `assert fmt(1000) == "1000"` identical — and telling those apart is what `moved goalpost` exists for.
 
-  So the rule needs a rename guard before it is worth having — the same skeleton-matching that `moved goalpost` already uses, so a removed test whose body survives under a new name is not reported. Both flask commits explain themselves in the commit message, which is the legitimate version this project already asks for; being surfaced is the point, not a defect.
+- [x] **It is not in the scanner default, and that was decided by measurement.** On the pinned sweep it produces 3 findings, and one is wrong in a way no diff-scoped tool can fix: express `9c85a25c02` "Remove duplicate tests" deletes a test whose identical twin lives in `test/res.json.js`, a file that commit never touched. The check did not disappear; witness cannot see the copy that survived. 2 of 3 is below both floors, and n=3 is too small to claim anything either way. It stays on in the agent hook, where the diff really is the whole change. Same precedent as `suppression`.
 
-  Still to do: corpus cases, the rename guard, and a measured precision against the pinned sweep before it goes anywhere near the default rule set.
+- [x] **Recall corrected from 98% to 94.4%.** The second run returned 91.2% (62/68) against the first run's 98.2% (55/56). The intervals overlap, so nothing is contradicted — but quoting the better of two runs is selection, and the pooled 117/124 with a 95% interval of 89–97% is what the evidence supports.
+
 - [ ] **A `moved goalpost` variant that survives a signature change.** The other four misses rewrote the assertion around a new parameter — `round_price(250)` became `round_price(250, mode='half_up')` — so both contradictory expectations could coexist. Same substance as a moved goalpost; the shared-subject check does not match across an added argument. Harder than it looks: some of these are legitimate API evolution.
-- [x] **Recall corrected from 98% to 94.4%.** The second run returned 91.2% (62/68) against the first run's 98.2% (55/56). The intervals overlap, so nothing is contradicted — but quoting the better of two runs is selection, and the pooled 117/124 with a 95% interval of 89–97% is what the evidence supports. Corrected in the README, `docs/SPEC.md` and the sweep write-up.
 
 ## Then — independence, which needs a second person
 

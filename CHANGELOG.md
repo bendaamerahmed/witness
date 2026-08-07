@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.6.0] — 2026-08-07
+
+An eighth tell, found the way the seventh was: by re-running the benchmark and reading the cells the detector missed.
+
+### Added
+
+- **`deleted check`** — a test removed outright while no source file changed. Every other rule inspects *added* lines, so a pure deletion left nothing to inspect, and deleting the failing test scanned `clean` until now. It is the most direct cheat available.
+
+  **The width was measured before the rule was written.** Across the 171 pinned commits, "any test removed" is **11.7 findings per 100** — `got` dropping a deprecated module with its nine tests, redirect tests consolidated, flask's greenlet rewrite. All legitimate, and at that rate the rule would roughly double this detector's entire output. That form was never built; it is the Go `_, err :=` shape, a correct observation that is the wrong thing to print. Requiring that no source file changed takes it to **1.8 per 100**.
+
+  **Rename guard.** A test whose name survives with trailing digits changed, or whose body survives verbatim under a new name, is a rename rather than a deletion — `it('should encode data uri1')` and `uri2` becoming `uri` is a consolidation, and it was the false positive the first measurement produced. Bodies are compared raw, not skeletonized: blanking literals would make `assert fmt(1000) == "1,000"` and `assert fmt(1000) == "1000"` identical, and telling those apart is what `moved goalpost` exists for.
+
+- Seven corpus cases pinning it in both directions — the cheat shape in Python and Go, and five legitimate shapes drawn from the sweep: a test removed with its source, a consolidation, a word-suffix rename, a duplicate whose twin survives, and a test-only refactor that removes nothing. Corpus is now **78 cases, 78/78 exact match**.
+
+### Changed
+
+- **`deleted check` is not in the scanner default**, decided by measurement rather than taste. On the pinned sweep it produces 3 findings and one is wrong in a way no diff-scoped tool can fix: express `9c85a25c02` "Remove duplicate tests" deletes a test whose identical twin lives in `test/res.json.js`, a file that commit never touched. The check did not disappear; witness cannot see the copy that survived. 2 of 3 is below both floors and n=3 claims nothing. It stays on in the agent hook, where the diff really is the whole change. Same precedent as `suppression`, which left the default set for the same kind of reason.
+- The wild sweep is unmoved — 31 findings, 93.5% / 81.8% — because the sweep runs the scanner default. The scorer now names both held-out tells rather than only `suppression`.
+
+### Fixed
+
+- **A guard that could not fail.** `tests/sarif.test.js` asserted every tell has a SARIF rule by iterating `Object.keys(ASK)` — so a tell added without an advisory entry was absent from the loop and could not fail it. That is exactly what happened when `deleted check` landed: no `ASK` text, no SARIF rule, and a green suite. It iterates `ALL_TELLS` now and asserts both, and the missing entries were added.
+
 ## [0.5.1] — 2026-08-07
 
 The benchmark was run again. The published run held up; one published number did not, and a blind spot turned up in the cells the detector missed.

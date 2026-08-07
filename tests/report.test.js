@@ -159,11 +159,18 @@ test('PDF paginates rather than running off one page', () => {
 // ---------------------------------------------------------------------------
 // rule sets
 // ---------------------------------------------------------------------------
-test('suppression is not in the scanner default set', () => {
+test('the tells held out of the scanner default are held out for measured reasons', () => {
+  // Both exclusions were decided by counting on real commits, not by taste.
   assert.ok(ALL_TELLS.includes('suppression'));
   assert.ok(!SCANNER_DEFAULT.includes('suppression'),
     'on 111 real commits suppression was 100 of 136 findings, almost all intentional');
-  assert.strictEqual(SCANNER_DEFAULT.length, ALL_TELLS.length - 1);
+
+  assert.ok(ALL_TELLS.includes('deleted check'));
+  assert.ok(!SCANNER_DEFAULT.includes('deleted check'),
+    'on the pinned sweep it is 3 findings in 171 commits and one of the three is '
+    + 'a duplicate whose twin lives in a file the commit never touched — 2 of 3, below both floors');
+
+  assert.strictEqual(SCANNER_DEFAULT.length, ALL_TELLS.length - 2);
 });
 
 test('applyRules filters to the requested set', () => {

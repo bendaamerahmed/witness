@@ -40,7 +40,7 @@ We found this by running a benchmark, not by theorising. Across 96 cells of an a
 | **93.5%** | precision on 171 real merged commits, 95% CI **79–98%** — every finding hand-labelled, both false positives published ([sweep](benchmarks/results/2026-08-06-wild-sweep.md)) |
 | **6.4** | issues per 100 real merged commits, across 5 OSS repos it has never seen |
 | **94.4%** | recall on 124 real agent-modified checks, pooled over two independent runs (117/124), 95% CI **89–97%** ([replication](benchmarks/results/2026-08-07-replication.md)) |
-| **7** | tells detected across Python, JS/TS, Go, Rust, Ruby, Java, shell, CI config |
+| **8** | tells detected across Python, JS/TS, Go, Rust, Ruby, Java, shell, CI config |
 | **0** | dependencies, network calls, telemetry |
 
 <sub>That precision figure used to read "100% on a labeled corpus", which was true and misleading: the corpus was written by the same person as the detector. Run against real repositories it produced <b>122 findings per 100 commits</b> — noise. Three rounds of fixing that is what v0.3.0 and v0.4.0 are. The number above is now one rater's verdict on 31 real findings from <a href="benchmarks/wild-pins.json">pinned</a> commits, scored by <code>npm run wild:precision</code> in CI — <b>93.5% by finding (95% CI 79–98%), 81.8% after grouping (95% CI 52–95%)</b>, and <b>no recall figure in the wild</b>, because that would mean reading all 171 commits by hand and nobody has. Those intervals are the honest width of 31 observations, and the issue figure rests on 11: read them as ranges, not as the headline. The scorer also breaks the number out per tell and per language, where several cells rest on a single finding. One rater who maintains the tool is not independence. Independent false-positive reports are the <a href=".github/ISSUE_TEMPLATE/false-positive.yml">most valuable issue you can file</a>.</sub>
@@ -53,7 +53,7 @@ Not maliciously. It found the shortest path to the state you asked for, and the 
 
 This is not hypothetical. Across **623M analysed code changes**, GitClear found error-masking constructs up **47%** and refactored code collapsing from 21% to 3.8%. A study that mined **327 agent-authored public pull requests** found maintainer-identified cheating in 8% of them — and **seven were merged anyway**, into repositories including `microsoft/testfx` and `outline/outline`.
 
-## The seven tells
+## The eight tells
 
 ```
 moved goalpost       assert fmt(1000)  ->  assert fmt(100)     88% of observed cheats
@@ -63,6 +63,7 @@ swallow              except Exception: pass
 skip                 @pytest.mark.skip
 fixture fitting      if sku == "ABC-123": return 42     (only when the test uses it)
 suppression          # type: ignore                     (off by default, see below)
+deleted check        a test removed, no source changed   (off by default, see below)
 ```
 
 Full anatomy of each — how it works, when it is legitimate, how it is detected: **[docs/TELLS.md](docs/TELLS.md)**.
@@ -108,7 +109,7 @@ tests/test_fmt.py:7  moved goalpost  assert fmt(1000) == "1000" -> assert fmt(10
 
 No dependencies, no network — the PDF writer is hand-rolled rather than pull one in. Exit `0` unless you asked for a gate, and unknown flags are refused with a suggestion instead of silently ignored.
 
-`suppression` is **off by default** in the CLI: it was 100 of the first sweep's 136 findings and almost every one was intentional. It stays on in the agent hook, where an agent adding `# type: ignore` mid-fix is exactly the case worth catching. `--all` turns it on anywhere.
+Two tells are **off by default** in the CLI, both for measured reasons. `suppression` was 100 of the first sweep's 136 findings and almost every one was intentional. `deleted check` produces 3 findings on 171 pinned commits and one of the three is a duplicate whose surviving twin lives in a file the commit never touched — invisible to anything reading only a diff, so 2 of 3, below the floors this project gates on. Both stay on in the agent hook, where the diff really is the whole change and an agent deleting a failing test mid-fix is exactly the case worth catching. `--all` turns them on anywhere.
 
 ## Or in your agent, live
 
@@ -160,7 +161,7 @@ Instruction-only hosts get the ruleset. Diff inspection needs hooks.
 
 ## The escape hatch is the point
 
-Every one of the seven tells is sometimes correct. Tests really are flaky. Upstream stubs really are wrong. Witness forbids none of them — it forbids doing them silently.
+Every one of the eight tells is sometimes correct. Tests really are flaky. Upstream stubs really are wrong. Witness forbids none of them — it forbids doing them silently.
 
 ```python
 # witness: upstream stub types are wrong, tracked in #4412

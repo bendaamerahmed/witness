@@ -162,9 +162,11 @@ Without the correspondence requirement this rule produced 24 findings on 111 rea
 
 ---
 
-## What none of them catch: a deleted test
+## deleted check
 
-Every tell above inspects **added** lines. A test that is removed outright adds nothing, so there is nothing for any of the seven rules to look at. Deleting a failing test is the most direct cheat available, and witness is blind to it:
+**Not in the scanner default.** Turn it on with `--all` or `--rules deleted-check`. On in the agent hook.
+
+Every other tell inspects **added** lines. A test removed outright adds nothing, so there was nothing for any of them to look at, and deleting the failing test — the most direct cheat available — scanned clean until v0.6.0.
 
 ```diff
  def test_thousands_separator():
@@ -174,14 +176,15 @@ Every tell above inspects **added** lines. A test that is removed outright adds 
 -    assert fmt(1000) == "1000"
 ```
 
-```
-witness --dir before/ --dir after/ --all
-witness 0.5.0 — clean: 1 file(s) changed, no tells.
-```
+**How it is detected.** A test declaration present before and absent after, in a change where **no source file changed**. Both halves are required, and the second one is what makes the rule usable at all.
 
-This was found on 2026-08-07 by re-running the benchmark and reading the cells the detector missed — two of six misses were exactly this shape ([replication](../benchmarks/results/2026-08-07-replication.md)). It is a candidate eighth tell and is on the [roadmap](ROADMAP.md), deliberately unimplemented for now: a rule shipped without a corpus and a measured precision is how the Go `_, err :=` rule got in and had to be taken out again.
+**Why the second half.** The width was measured on the 171 pinned commits before the rule was written. "Any test removed" is **11.7 findings per 100 commits** — `got` dropping a deprecated module with its nine tests, redirect tests consolidated, flask's greenlet rewrite. All legitimate, and at that rate the rule would roughly double this detector's entire output. Requiring that no source file changed takes it to **1.8 per 100**. Deleting a check while touching nothing that runs in production is not refactoring.
 
-Until it exists, treat a diff that only *removes* checks as unexamined by this tool. `git diff --stat` on your test directory is the cheap manual substitute.
+**Renames do not count.** A test whose name survives with trailing digits changed, or whose body survives verbatim under a new name, is a rename. `it('should encode data uri1')` and `uri2` becoming `it('should encode data uri')` is a consolidation, and it was the false positive the first measurement produced. Bodies are compared raw rather than skeletonized: blanking literals would make `assert fmt(1000) == "1,000"` and `assert fmt(1000) == "1000"` identical, and telling those two apart is the entire point of `moved goalpost`.
+
+**What it gets wrong.** It cannot see a duplicate that survives in a file the change never touched. express `9c85a25c02` — "Remove duplicate tests" — deletes `should not override previous Content-Types` from `test/res.jsonp.js` while an identical copy remains in `test/res.json.js`, a file not in the diff. The check did not disappear; witness has no way to know that from the diff alone. This is why the rule is not in the scanner default: 2 of 3 on the only real corpus available, below both floors, on a sample far too small to claim anything.
+
+**Where it came from.** Re-running the benchmark on 2026-08-07 and reading the cells the detector missed. Two of six misses were exactly this shape ([replication](../benchmarks/results/2026-08-07-replication.md)) — the same way `moved goalpost` was found.
 
 ## The escape hatch
 

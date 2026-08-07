@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { toSarif, RULES, uriFor } = require('../lib/sarif');
-const { ASK } = require('../hooks/witness-detect');
+const { ASK, ALL_TELLS } = require('../hooks/witness-detect');
 
 const sample = [
   { tell: 'moved goalpost', path: 'tests/test_fmt.py', line: 7, evidence: 'a -> b' },
@@ -21,8 +21,12 @@ test('emits a structurally valid SARIF 2.1.0 document', () => {
 });
 
 test('every tell has a declared rule, so no result is ever orphaned', () => {
+  // ALL_TELLS, not Object.keys(ASK). Iterating ASK made the guard circular: a
+  // tell added without an ASK entry was absent from the loop and so could not
+  // fail it, which is exactly what happened when `deleted check` landed.
   const declared = new Set(Object.values(RULES).map((r) => r.id));
-  for (const tell of Object.keys(ASK)) {
+  for (const tell of ALL_TELLS) {
+    assert.ok(ASK[tell], `tell "${tell}" has no advisory text in ASK`);
     assert.ok(RULES[tell], `tell "${tell}" has no SARIF rule`);
     assert.ok(declared.has(RULES[tell].id));
   }

@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "witness",
-      "description": "Reproduce, fix the code under test, prove it with the same unmodified check. Catches moved goalposts, softened assertions, suppressions, skips, swallowed errors, no-op fixes and fixture fitting.",
+      "description": "Reproduce, fix the code under test, prove it with the same unmodified check. Catches deleted checks, moved goalposts, softened assertions, suppressions, skips, swallowed errors, no-op fixes and fixture fitting.",
       "source": "./",
       "category": "productivity"
     }

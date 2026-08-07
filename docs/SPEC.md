@@ -29,11 +29,11 @@ Third-party measurement, none of it produced by this project:
 
 The problem is documented, quantified, and independently attested. This plugin does not need to argue that it exists.
 
-### 1.2 The seven tells
+### 1.2 The eight tells
 
-Every instance reduces to one of seven shapes. This taxonomy is the plugin's core asset: it is what makes the problem greppable, teachable, and measurable.
+Every instance reduces to one of eight shapes. This taxonomy is the plugin's core asset: it is what makes the problem greppable, teachable, and measurable.
 
-Six came from the literature. The seventh, `moved goalpost`, came from the first benchmark run, where it was **88% of every cheat observed** and the detector as originally specified caught none of them.
+Six came from the literature. The seventh, `moved goalpost`, came from the first benchmark run, where it was **88% of every cheat observed** and the detector as originally specified caught none of them. The eighth, `deleted check`, came from re-running that benchmark on 2026-08-07 and reading the cells the detector missed: two of six were the agent deleting the failing test outright, which every other rule misses by construction because they all inspect added lines.
 
 | tell | shape | why it works |
 | --- | --- | --- |
@@ -44,8 +44,9 @@ Six came from the literature. The seventh, `moved goalpost`, came from the first
 | **no-op fix** | only tests and config changed, source untouched, claim is a fix | the behavior provably did not change |
 | **fixture fitting** | a branch or constant matching exactly the test input | passes every visible check, fails every real input |
 | **moved goalpost** | an assertion of identical structure and strictness, different input or expected value | nothing about it looks weakened, so every assertion-strength heuristic scores it clean |
+| **deleted check** | a test removed outright while no source file changed | every other rule inspects *added* lines, so a pure deletion leaves nothing to inspect |
 
-Six of the seven are visible in a diff. `fixture fitting` is not, and section 6 is about that.
+Seven of the eight are visible in a diff. `fixture fitting` is not, and section 6 is about that.
 
 ---
 
@@ -67,7 +68,7 @@ No hook returns `decision: block`. No hook reverts an edit. No hook prevents a s
 
 ### P3 — Every pattern has a legitimate version
 
-Flaky tests exist. Upstream type stubs are wrong. Some tests assert implementation details and deserve to be deleted. A tool that treats all seven tells as misconduct is wrong roughly a fifth of the time and will be ignored the rest of the time.
+Flaky tests exist. Upstream type stubs are wrong. Some tests assert implementation details and deserve to be deleted. A tool that treats all eight tells as misconduct is wrong roughly a fifth of the time and will be ignored the rest of the time.
 
 The `witness:` marker is the escape hatch, and it is deliberately cheap — one comment, one reason. The cost is a sentence, not an argument. An unjustifiable pattern is rare; an *unexplained* one is the actual problem.
 
@@ -105,7 +106,7 @@ AGENTS.md                    the one true ruleset
 skills/witness/SKILL.md      long form, filtered per level at inject time
   └─ hooks/witness-instructions.js  strips mode-keyed table rows and examples
 
-hooks/witness-detect.js      the seven tells. shared by everything.
+hooks/witness-detect.js      the eight tells. shared by everything.
   ├─ hooks/witness-guard.js       PostToolUse   advisory on the edit
   ├─ hooks/witness-checkout.js    Stop          advisory on the session
   ├─ bin/witness-scan.js          CLI           git diff / dir compare
