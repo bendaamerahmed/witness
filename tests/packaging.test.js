@@ -148,10 +148,35 @@ test('every manifest declares the same licence, and LICENSE is that licence', ()
     assert.ok(json('package.json').files.includes('NOTICE'), 'NOTICE must be in files[] or it never ships');
   }
 
-  const badge = /license-([A-Za-z0-9.\-]+?)-\d{6}/.exec(read('README.md'));
+  const readme = read('README.md');
+  const badge = /license-([A-Za-z0-9.\-]+?)-\d{6}/.exec(readme);
   assert.ok(badge, 'README has no licence badge');
   assert.strictEqual(badge[1].replace(/--/g, '-'), spdx,
     `README badge says ${badge[1]} but the manifests say ${spdx}`);
+
+  // The badge is not the only place the README states the terms. v0.8.0 shipped
+  // with the badge updated and `## License\n\n[MIT](LICENSE).` still sitting at
+  // the bottom, so npm rendered "License: MIT" on an Apache-2.0 package. Checking
+  // only the badge is how a guard passes while the thing it guards is wrong.
+  const OTHER = ['MIT', 'GPL-3.0', 'AGPL-3.0', 'MPL-2.0', 'BSD-3-Clause', 'Apache-2.0']
+    .filter((id) => id !== spdx);
+
+  // Every skill declares a licence in its own frontmatter, and all seven were
+  // still on MIT after the relicense. They ship in the package and the host
+  // reads them, so they are not documentation — they are declarations.
+  for (const dir of fs.readdirSync(path.join(ROOT, 'skills'))) {
+    const rel = `skills/${dir}/SKILL.md`;
+    const m = /^license:\s*(\S+)\s*$/m.exec(read(rel));
+    if (!m) continue;
+    assert.strictEqual(m[1], spdx, `${rel} declares ${m[1]} but the package is ${spdx}`);
+  }
+  // A licence name is fine in prose about history; it is not fine as the answer
+  // to "what is this licensed under", which is what a link to LICENSE means.
+  for (const m of readme.matchAll(/\[([^\]]+)\]\(LICENSE\)/g)) {
+    const named = m[1].trim();
+    assert.ok(!OTHER.includes(named),
+      `README links "${named}" to LICENSE, but the package is ${spdx}`);
+  }
 });
 
 test('bin paths carry no "./" prefix', () => {

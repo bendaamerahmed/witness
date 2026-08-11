@@ -9,7 +9,7 @@ description: >
   reviewing changes an agent just made. Trigger: /witness-scan, "witness scan",
   "scan this diff", "check this diff for cheating", "did the agent weaken anything",
   "is this fix real".
-license: MIT
+license: Apache-2.0
 ---
 
 # witness-scan

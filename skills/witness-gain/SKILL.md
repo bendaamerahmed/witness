@@ -6,7 +6,7 @@ description: >
   witness works, what the impact is, what the numbers are, or how it was measured.
   Trigger: /witness-gain, "witness gain", "does witness work", "what does witness
   save", "show witness impact", "witness benchmark", "witness numbers".
-license: MIT
+license: Apache-2.0
 ---
 
 # witness-gain

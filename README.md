@@ -223,7 +223,7 @@ The hook budget is enforced in [`tests/perf.test.js`](tests/perf.test.js). The r
 No. It catches what is visible in a diff. An agent that quietly overfits source to a fixture looks honest to every grep ever written — which is why the benchmark leans on held-out tests instead of on the detector.
 
 **How often is it wrong?**
-Two findings in 31 on the pinned sweep, and both are [written up by name](benchmarks/results/2026-08-06-wild-sweep.md) rather than tuned away — each would need the detector to see something a diff does not contain. Whether it *misses* things in the wild is unmeasured and stated as unmeasured.
+Two findings in 34 on the pinned sweep, and both are [written up by name](benchmarks/results/2026-08-11-widened-sweep.md) rather than tuned away — each would need the detector to see something a diff does not contain. Whether it *misses* things in the wild is unmeasured and stated as unmeasured.
 
 **Does it fight with other plugins?**
 It composes especially well with minimalism rulesets like [ponytail](https://github.com/DietrichGebert/ponytail). Ponytail governs how much code gets written; witness governs whether the green checkmark means anything. The smallest change that is *actually verified* is both goals at once.
@@ -233,4 +233,4 @@ Somebody has to have watched it fail.
 
 ## License
 
-[MIT](LICENSE).
+[Apache-2.0](LICENSE), with a [NOTICE](NOTICE). Versions up to and including `v0.7.0` were released under MIT and stay available under it — a licence change binds only what is published after it.

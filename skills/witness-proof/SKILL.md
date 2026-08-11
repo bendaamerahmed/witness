@@ -8,7 +8,7 @@ description: >
   bug fix. Trigger: /witness-proof, "witness proof", "prove it", "show me the
   receipts", "did you actually run it", "verify this fix", "how do you know it
   works".
-license: MIT
+license: Apache-2.0
 ---
 
 # witness-proof

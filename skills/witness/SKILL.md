@@ -16,7 +16,7 @@ description: >
   that CI is green but the bug is still there. Do NOT use for non-coding requests
   (general knowledge, prose, translation, summaries, recipes).
 argument-hint: "[lite|full|ultra|off]"
-license: MIT
+license: Apache-2.0
 ---
 
 # Witness

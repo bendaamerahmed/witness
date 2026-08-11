@@ -8,7 +8,7 @@ description: >
   exceptions, before a release, or when deciding what to pay down. Trigger:
   /witness-ledger, "witness ledger", "show the declared exceptions", "what did we
   agree to live with", "list witness markers".
-license: MIT
+license: Apache-2.0
 ---
 
 # witness-ledger

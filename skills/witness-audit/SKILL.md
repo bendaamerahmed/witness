@@ -8,7 +8,7 @@ description: >
   when the user asks how much of the test suite actually runs. Trigger:
   /witness-audit, "witness audit", "audit the repo", "how many tests are skipped",
   "find all the ignores", "how much of our green is real", "check debt".
-license: MIT
+license: Apache-2.0
 ---
 
 # witness-audit

@@ -1,6 +1,6 @@
 {
   "name": "witness",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Proof-of-work mode. Every completion claim carries evidence: reproduce the failure, fix the code under test, show the same unmodified check passing.",
   "author": {
     "name": "Ahmed Ben Daamer",

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.1] — 2026-08-11
+
+### Fixed
+
+- **The relicense was incomplete, and the guard written for it did not catch that.** v0.8.0 updated the badge, the four manifests and `LICENSE`, but left `## License` → `[MIT](LICENSE)` at the bottom of the README — so npm rendered **License: MIT** on an Apache-2.0 package. Reported from the npm page, not by any check here.
+- **All seven `skills/*/SKILL.md` still declared `license: MIT`** in their frontmatter. They ship in the package and the host reads them, so they are declarations rather than prose. Found only because the first miss prompted a full sweep.
+- The guard now reads every `[name](LICENSE)` link in the README and every skill's frontmatter, instead of checking the badge alone. Verified against the README as it was at v0.8.0: it reports the MIT link and fails. Checking one of five places is how a guard passes while the thing it guards is wrong — which is the failure this project exists to name.
+- Two stale figures in the README FAQ: `two findings in 31` → `in 34`, and a link to the superseded sweep write-up.
+
 ## [0.8.0] — 2026-08-11
 
 ### Changed

@@ -6,7 +6,7 @@ description: >
   what witness does, how to use it, what the commands are, or how to configure it.
   Trigger: /witness-help, "witness help", "how do I use witness", "witness
   commands", "what does witness do".
-license: MIT
+license: Apache-2.0
 ---
 
 # witness-help
