@@ -1,0 +1,30 @@
+witness
+Copyright 2026 Ahmed Ben Daamer
+
+This product is licensed under the Apache License, Version 2.0.
+You may obtain a copy of the License in the LICENSE file, or at
+https://www.apache.org/licenses/LICENSE-2.0
+
+--------------------------------------------------------------------------------
+
+Licence history
+
+Versions 0.2.0 through 0.7.0 were released under the MIT License, and remain
+available under it. A licence change binds only what is published after it: any
+copy obtained under MIT stays under MIT permanently, including the right to fork
+from any tag up to and including v0.7.0.
+
+Versions after 0.7.0 are released under Apache-2.0. The practical differences
+from MIT are an explicit patent grant from contributors, termination of that
+grant for anyone who brings a patent claim over the software, and a requirement
+to preserve attribution and this NOTICE when redistributing.
+
+--------------------------------------------------------------------------------
+
+Third-party content
+
+This product has no runtime dependencies.
+
+benchmarks/.wild-repos/ is not part of this product. It is a local cache of
+third-party repositories cloned for measurement, each under its own licence, and
+is excluded from the published package and from version control.

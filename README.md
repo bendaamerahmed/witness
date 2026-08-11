@@ -14,7 +14,7 @@
 ![precision](https://img.shields.io/badge/precision-94.1%25%20%2895%25%20CI%2081--98%29-111111?style=flat-square)
 ![deps](https://img.shields.io/badge/dependencies-0-111111?style=flat-square)
 ![hooks](https://img.shields.io/badge/hooks-advisory%20only-111111?style=flat-square)
-[![license](https://img.shields.io/badge/license-MIT-111111?style=flat-square)](LICENSE)
+[![license](https://img.shields.io/badge/license-Apache--2.0-111111?style=flat-square)](LICENSE)
 
 **The agent didn't weaken the test. It changed the question.**
 

@@ -124,6 +124,36 @@ test('every declared bin exists and is executable as a script', () => {
   }
 });
 
+test('every manifest declares the same licence, and LICENSE is that licence', () => {
+  // Five places say what the terms are: four manifests, a README badge, and the
+  // LICENSE file itself. A relicense that updates some of them and not others
+  // publishes two different answers to the only question a lawyer will ask.
+  const MANIFESTS = ['package.json', '.claude-plugin/plugin.json',
+    '.codex-plugin/plugin.json', '.github/plugin/plugin.json'];
+  const declared = new Set(MANIFESTS.map((f) => json(f).license));
+  assert.strictEqual(declared.size, 1,
+    `manifests disagree on the licence: ${[...declared].join(', ')}`);
+
+  const spdx = [...declared][0];
+  const license = read('LICENSE');
+  const marker = { 'Apache-2.0': 'Apache License', MIT: 'MIT License' }[spdx];
+  assert.ok(marker, `no LICENSE marker known for SPDX id "${spdx}"`);
+  assert.ok(license.includes(marker),
+    `manifests say ${spdx} but LICENSE does not contain "${marker}"`);
+
+  // NOTICE is required by Apache-2.0 section 4(d) when it exists, and it is what
+  // records that everything up to v0.7.0 stays MIT.
+  if (spdx === 'Apache-2.0') {
+    assert.ok(fs.existsSync(path.join(ROOT, 'NOTICE')), 'Apache-2.0 ships a NOTICE file');
+    assert.ok(json('package.json').files.includes('NOTICE'), 'NOTICE must be in files[] or it never ships');
+  }
+
+  const badge = /license-([A-Za-z0-9.\-]+?)-\d{6}/.exec(read('README.md'));
+  assert.ok(badge, 'README has no licence badge');
+  assert.strictEqual(badge[1].replace(/--/g, '-'), spdx,
+    `README badge says ${badge[1]} but the manifests say ${spdx}`);
+});
+
 test('bin paths carry no "./" prefix', () => {
   // npm rewrites "./bin/x.js" to "bin/x.js" on publish and warns about it on
   // every release: `"bin[witness]" script name bin/witness-scan.js was invalid

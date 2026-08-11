@@ -1,8 +1,8 @@
 {
   "name": "@witness-plugin/witness",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Proof-of-work mode for AI coding agents. A green check is not evidence. It is a claim.",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "Ahmed Ben Daamer",
   "homepage": "https://github.com/bendaamerahmed/witness",
   "repository": {
@@ -29,6 +29,7 @@
     "assets/logo.svg",
     "assets/logo-dark.svg",
     "LICENSE",
+    "NOTICE",
     "README.md"
   ],
   "scripts": {

@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.8.0] — 2026-08-11
+
+### Changed
+
+- **Relicensed from MIT to Apache-2.0.** No code changed.
+
+  What this adds over MIT: an **explicit patent grant** from contributors, **termination of that grant** for anyone who brings a patent claim over the software, and a requirement to **preserve attribution and the NOTICE file** when redistributing. MIT grants no patent rights at all and says nothing about patent aggression — that is the gap this closes.
+
+  **Everything already published stays MIT, permanently.** Versions 0.2.0 through 0.7.0 remain available under MIT, and anyone who obtained a copy under it keeps those rights forever — including the right to fork from any tag up to and including `v0.7.0`. A licence change binds only what is published after it. This is recorded in [`NOTICE`](NOTICE) rather than left for someone to work out.
+
+  Apache-2.0 was chosen over copyleft deliberately. witness earns its keep by running inside other people's pipelines, and GPL/AGPL dependencies are blocked outright by many corporate legal reviews. A licence that stops the tool being installed protects nothing worth protecting.
+
+### Added
+
+- [`NOTICE`](NOTICE), required by Apache-2.0 §4(d) and shipped in the package. It carries the copyright, the licence history above, and a note that `benchmarks/.wild-repos/` is a local cache of third-party repositories under their own licences, excluded from the package and from version control.
+- A packaging test asserting all four manifests declare the same SPDX id, that `LICENSE` actually contains that licence, that the README badge agrees, and that `NOTICE` is in `files[]`. Verified it catches the realistic failure — one manifest left behind on the old licence.
+
 ## [0.7.0] — 2026-08-11
 
 Five repositories became fifteen, four languages became eight, 171 commits became 496. The question was whether 93.5% was a property of the detector or of the five repositories it was measured on.
