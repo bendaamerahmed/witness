@@ -16,6 +16,16 @@
     "flask": "6a2f545bfd8ed31e19066a299296917e034aca58",
     "got": "e3924aa1e53a6ca3eb93a43618ce532442a89b40",
     "express": "a3714473feb3d2908add734d340e7755fd85e0a3",
-    "gin": "34dac209ffb6ef85cc78c5d217bbb7ad001d68fd"
+    "gin": "34dac209ffb6ef85cc78c5d217bbb7ad001d68fd",
+    "click": "9c4dfdaebe0e6b2aabc566eb81f6f10eb5cd6ea1",
+    "axios": "2c94646eb7cb7ab9dcb2aefdb04ab1b040c28e16",
+    "cobra": "adbc8813901bba65827259daa8e22ff94ec1f30e",
+    "chi": "8b258c7bb28f97a5f2a856ff7ef962578fec9215",
+    "viper": "528f7416c4b56a4948673984b190bf8713f0c3c4",
+    "ripgrep": "3fce3b5bb0236da2df6d99672afb8a719642eca7",
+    "clap": "4a622b4340d5e1fffff60c0ecefdc6882f738159",
+    "gson": "310ac341f2f92a454b229bf21f70d2d18b2b6db7",
+    "okhttp": "91a8b34c6f44bd28c421364f8edadc9f324dddd9",
+    "sinatra": "cb22afd7902b566b6eaba6c4ea89739494a65d12"
   }
 }

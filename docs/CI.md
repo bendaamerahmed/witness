@@ -6,19 +6,19 @@ Two ways to run it, and one strong recommendation about the order.
 
 **Start advisory. Do not gate on day one.**
 
-Run it on your pull requests with `fail-on: ''` for a few weeks and read what it finds. Every one of the seven tells has a legitimate version, and the ratio in *your* codebase is something you learn by looking, not by guessing. Teams that gate immediately meet a false positive during a release week and uninstall.
+Run it on your pull requests with `fail-on: ''` for a few weeks and read what it finds. Every one of the eight tells has a legitimate version, and the ratio in *your* codebase is something you learn by looking, not by guessing. Teams that gate immediately meet a false positive during a release week and uninstall.
 
 When you do gate, gate on one tell first. `moved-goalpost` and `no-op-fix` are the two with the least legitimate variance.
 
 ### How noisy should you expect it to be
 
-On [171 real merged commits](../benchmarks/results/2026-08-06-wild-sweep.md) from five healthy OSS projects, with the default rule set:
+On [496 real merged commits](../benchmarks/results/2026-08-11-widened-sweep.md) from fifteen healthy OSS projects across eight languages, with the default rule set:
 
 | | |
 | --- | ---: |
-| issues per 100 commits | **6.4** — roughly one per sixteen |
-| findings per 100 commits | 18.1 |
-| precision, hand-labelled | **93.5%** by finding (95% CI 79–98%), 81.8% by issue (95% CI 52–95%) |
+| issues per 100 commits | **2.8** — roughly one per thirty-six |
+| findings per 100 commits | 6.9 |
+| precision, hand-labelled | **94.1%** by finding (95% CI 81–98%), 85.7% by issue (95% CI 60–96%) |
 
 An *issue* is what you read; a *finding* is a line annotated. One express commit changed `Content-Disposition` quoting across seventeen assertion sites — seventeen findings, one decision, and the text, Markdown, HTML and PDF reports collapse it into one issue with the sites listed underneath. SARIF deliberately does not group, because GitHub annotates lines.
 

@@ -20,12 +20,38 @@
     "this file; disagreements are the point. If you flip a verdict, say why in",
     "`why` and leave the old reasoning in the commit message."
   ],
-  "labelledOn": "2026-08-06",
-  "version": "0.4.0",
+  "labelledOn": "2026-08-11",
+  "version": "0.7.0",
   "sweep": {
-    "commitsScanned": 171,
-    "repos": ["requests", "flask", "got", "express", "gin"],
-    "rules": "scanner default (suppression excluded)",
+    "commitsScanned": 496,
+    "repos": [
+      "requests",
+      "flask",
+      "got",
+      "express",
+      "gin",
+      "click",
+      "axios",
+      "cobra",
+      "chi",
+      "viper",
+      "ripgrep",
+      "clap",
+      "gson",
+      "okhttp",
+      "sinatra"
+    ],
+    "languages": [
+      "python",
+      "javascript",
+      "typescript",
+      "go",
+      "rust",
+      "java",
+      "kotlin",
+      "ruby"
+    ],
+    "rules": "scanner default (suppression and deleted check excluded)",
     "pins": "benchmarks/wild-pins.json"
   },
   "labels": {
@@ -85,25 +111,85 @@
       "verdict": "tp",
       "why": "express changed when it quotes Content-Disposition filenames: filename=\"x\" became filename=x across seventeen assertion sites. Every site is a real expectation change, and all seventeen are one decision — which is why the report groups them into a single issue."
     },
-    "express|59e205a57a|moved goalpost|test/acceptance/downloads.js|27": { "verdict": "tp", "why": "Same decision, another site." },
-    "express|59e205a57a|moved goalpost|test/res.attachment.js|34": { "verdict": "tp", "why": "Same decision, another site." },
-    "express|59e205a57a|moved goalpost|test/res.download.js|27": { "verdict": "tp", "why": "Same decision, another site." },
-    "express|59e205a57a|moved goalpost|test/res.download.js|70": { "verdict": "tp", "why": "Same decision, another site." },
-    "express|59e205a57a|moved goalpost|test/res.download.js|87": { "verdict": "tp", "why": "Same decision, another site." },
-    "express|59e205a57a|moved goalpost|test/res.download.js|116": { "verdict": "tp", "why": "Same decision, another site." },
-    "express|59e205a57a|moved goalpost|test/res.download.js|165": { "verdict": "tp", "why": "Same decision, another site. This one keeps its own group because the old value was filename=\".name\" — a leading dot, quoted differently from the rest." },
-    "express|59e205a57a|moved goalpost|test/res.download.js|262": { "verdict": "tp", "why": "Same decision, another site." },
-    "express|59e205a57a|moved goalpost|test/res.download.js|280": { "verdict": "tp", "why": "Same decision, another site." },
-    "express|59e205a57a|moved goalpost|test/res.download.js|299": { "verdict": "tp", "why": "Same decision, another site." },
-    "express|59e205a57a|moved goalpost|test/res.download.js|316": { "verdict": "tp", "why": "Same decision, another site." },
-    "express|59e205a57a|moved goalpost|test/res.download.js|370": { "verdict": "tp", "why": "Same decision, another site." },
-    "express|59e205a57a|moved goalpost|test/res.download.js|389": { "verdict": "tp", "why": "Same decision, another site." },
-    "express|59e205a57a|moved goalpost|test/res.download.js|406": { "verdict": "tp", "why": "Same decision, another site." },
-    "express|59e205a57a|moved goalpost|test/res.download.js|429": { "verdict": "tp", "why": "Same decision, another site." },
-    "express|59e205a57a|moved goalpost|test/res.download.js|449": { "verdict": "tp", "why": "Same decision, another site." },
+    "express|59e205a57a|moved goalpost|test/acceptance/downloads.js|27": {
+      "verdict": "tp",
+      "why": "Same decision, another site."
+    },
+    "express|59e205a57a|moved goalpost|test/res.attachment.js|34": {
+      "verdict": "tp",
+      "why": "Same decision, another site."
+    },
+    "express|59e205a57a|moved goalpost|test/res.download.js|27": {
+      "verdict": "tp",
+      "why": "Same decision, another site."
+    },
+    "express|59e205a57a|moved goalpost|test/res.download.js|70": {
+      "verdict": "tp",
+      "why": "Same decision, another site."
+    },
+    "express|59e205a57a|moved goalpost|test/res.download.js|87": {
+      "verdict": "tp",
+      "why": "Same decision, another site."
+    },
+    "express|59e205a57a|moved goalpost|test/res.download.js|116": {
+      "verdict": "tp",
+      "why": "Same decision, another site."
+    },
+    "express|59e205a57a|moved goalpost|test/res.download.js|165": {
+      "verdict": "tp",
+      "why": "Same decision, another site. This one keeps its own group because the old value was filename=\".name\" — a leading dot, quoted differently from the rest."
+    },
+    "express|59e205a57a|moved goalpost|test/res.download.js|262": {
+      "verdict": "tp",
+      "why": "Same decision, another site."
+    },
+    "express|59e205a57a|moved goalpost|test/res.download.js|280": {
+      "verdict": "tp",
+      "why": "Same decision, another site."
+    },
+    "express|59e205a57a|moved goalpost|test/res.download.js|299": {
+      "verdict": "tp",
+      "why": "Same decision, another site."
+    },
+    "express|59e205a57a|moved goalpost|test/res.download.js|316": {
+      "verdict": "tp",
+      "why": "Same decision, another site."
+    },
+    "express|59e205a57a|moved goalpost|test/res.download.js|370": {
+      "verdict": "tp",
+      "why": "Same decision, another site."
+    },
+    "express|59e205a57a|moved goalpost|test/res.download.js|389": {
+      "verdict": "tp",
+      "why": "Same decision, another site."
+    },
+    "express|59e205a57a|moved goalpost|test/res.download.js|406": {
+      "verdict": "tp",
+      "why": "Same decision, another site."
+    },
+    "express|59e205a57a|moved goalpost|test/res.download.js|429": {
+      "verdict": "tp",
+      "why": "Same decision, another site."
+    },
+    "express|59e205a57a|moved goalpost|test/res.download.js|449": {
+      "verdict": "tp",
+      "why": "Same decision, another site."
+    },
     "gin|ae3f524974|moved goalpost|debug_test.go|124": {
       "verdict": "tp",
       "why": "The expected warning string moved from Go 1.24+ to Go 1.25+. A real change to what the check demands."
+    },
+    "sinatra|0135c85402|moved goalpost|test/haml_test.rb|78": {
+      "verdict": "tp",
+      "why": "Commit \"Update tests for Haml v7\". The expected value changed from class='header' to class=#{quote_char}header#{quote_char} because Haml v7 emits a different quote character. A real expectation change, and only the Gemfile and the tests moved — no library source. That is exactly the case worth a reviewer saying out loud, and the commit title does say it."
+    },
+    "sinatra|0135c85402|no-op fix|test/haml_test.rb|78": {
+      "verdict": "tp",
+      "why": "The same commit changes only Gemfile, a spec and a test, and a check got weaker in it. The behaviour change came from upgrading Haml rather than from anything in this repository, so \"no source file changed and an expectation moved\" is a true and useful thing to put in front of a reviewer."
+    },
+    "sinatra|025e8c5ead|moved goalpost|test/helpers_test.rb|709": {
+      "verdict": "tp",
+      "why": "Commit \"Fix malformed Content-Type headers (#2081)\". The expectation changed from 'foo/bar;level=1, charset=utf-8' to 'foo/bar;level=1;charset=utf-8' — comma to semicolon. lib/sinatra/base.rb was fixed in the same commit and a further assertion was added, so this is a correct fix with its expectation updated to match. Still a real expectation change, correctly reported."
     }
   }
 }

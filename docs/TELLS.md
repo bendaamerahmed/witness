@@ -1,4 +1,4 @@
-# The seven tells
+# The eight tells
 
 Every way a green check can lie, with what it looks like, why it works, when it is legitimate, and how the detector decides.
 
@@ -6,7 +6,7 @@ Six of these came from the literature. The seventh, **moved goalpost**, came fro
 
 Detector source: [`hooks/witness-detect.js`](../hooks/witness-detect.js). Labeled corpus: [`benchmarks/corpus/cases.js`](../benchmarks/corpus/cases.js).
 
-**How accurate is this.** On [171 real merged commits](../benchmarks/results/2026-08-06-wild-sweep.md), hand-labelled one by one: **93.5% precision by finding (95% CI 79–98%), 81.8% by issue (95% CI 52–95%)**, with both false positives named below in the sections of the rules that produced them. `npm run wild:precision` also prints the figure per tell and per language; several of those cells rest on one or two findings, and their intervals say so rather than reading as verdicts. Recall in the wild is unmeasured and stated as unmeasured. Where a rule has a known blind spot, it says so under **What it gets wrong** rather than in a footnote.
+**How accurate is this.** On [496 real merged commits](../benchmarks/results/2026-08-11-widened-sweep.md) across eight languages, hand-labelled one by one: **94.1% precision by finding (95% CI 81–98%), 85.7% by issue (95% CI 60–96%)**, with both false positives named below in the sections of the rules that produced them. `npm run wild:precision` also prints the figure per tell and per language; several of those cells rest on one or two findings, and their intervals say so rather than reading as verdicts. Recall in the wild is unmeasured and stated as unmeasured. Where a rule has a known blind spot, it says so under **What it gets wrong** rather than in a footnote.
 
 ---
 
@@ -41,7 +41,7 @@ Detector source: [`hooks/witness-detect.js`](../hooks/witness-detect.js). Labele
 
 Two contradictory expectations made compatible by widening the API. The benchmark produced this four times ([replication](../benchmarks/results/2026-08-07-replication.md)) and the detector was silent on all four.
 
-**It is deliberately not detected, and the reason is measured.** The shape occurs **zero times in the 171 pinned commits**, so its false-positive rate cannot be estimated at all — and in the benchmark cells the agent changed source (a real `mode` parameter, +12 lines) and the held-out check the agent never saw **passed**. From a diff, that is indistinguishable from ordinary API evolution: someone added a parameter and updated the tests, which is one of the most common legitimate changes there is. Deciding it correctly needs to know whether `mode` was in the spec, and a diff does not contain that. This is the same rule that removed Go's `_, err :=`: a tell that needs information the diff does not carry belongs in a type checker, not here.
+**It is deliberately not detected, and the reason is measured.** The shape occurs **zero times in the 496 pinned commits**, so its false-positive rate cannot be estimated at all — and in the benchmark cells the agent changed source (a real `mode` parameter, +12 lines) and the held-out check the agent never saw **passed**. From a diff, that is indistinguishable from ordinary API evolution: someone added a parameter and updated the tests, which is one of the most common legitimate changes there is. Deciding it correctly needs to know whether `mode` was in the spec, and a diff does not contain that. This is the same rule that removed Go's `_, err :=`: a tell that needs information the diff does not carry belongs in a type checker, not here.
 
 ---
 
@@ -191,7 +191,7 @@ Every other tell inspects **added** lines. A test removed outright adds nothing,
 
 **How it is detected.** A test declaration present before and absent after, in a change where **no source file changed**. Both halves are required, and the second one is what makes the rule usable at all.
 
-**Why the second half.** The width was measured on the 171 pinned commits before the rule was written. "Any test removed" is **11.7 findings per 100 commits** — `got` dropping a deprecated module with its nine tests, redirect tests consolidated, flask's greenlet rewrite. All legitimate, and at that rate the rule would roughly double this detector's entire output. Requiring that no source file changed takes it to **1.8 per 100**. Deleting a check while touching nothing that runs in production is not refactoring.
+**Why the second half.** The width was measured on the pinned commits before the rule was written. "Any test removed" is **11.7 findings per 100 commits** — `got` dropping a deprecated module with its nine tests, redirect tests consolidated, flask's greenlet rewrite. All legitimate, and at that rate the rule would roughly double this detector's entire output. Requiring that no source file changed takes it to **1.8 per 100**. Deleting a check while touching nothing that runs in production is not refactoring.
 
 **Renames do not count.** A test whose name survives with trailing digits changed, or whose body survives verbatim under a new name, is a rename. `it('should encode data uri1')` and `uri2` becoming `it('should encode data uri')` is a consolidation, and it was the false positive the first measurement produced. Bodies are compared raw rather than skeletonized: blanking literals would make `assert fmt(1000) == "1,000"` and `assert fmt(1000) == "1000"` identical, and telling those two apart is the entire point of `moved goalpost`.
 

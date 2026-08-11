@@ -639,4 +639,53 @@ c('cs-honest-test-only-refactor-no-removal', {
   before: '', after: '',
 });
 
+// ===========================================================================
+// Assertion idioms outside Python/JS/Go.
+//
+// `\bassert\b` needs a non-word character after "assert", which silently
+// excluded the dominant form in three languages: JUnit's assertEquals, Rust's
+// assert_eq!, minitest's assert_equal. Only bare `assert `, `assert!`,
+// `assert.Equal` and `expect(` were ever seen.
+//
+// That is invisible until the sweep is widened past those three languages, and
+// then it is worse than invisible: repositories whose assertions cannot be seen
+// add commits to the denominator and no findings to the numerator, so
+// findings-per-100 falls and reads as an improvement.
+// ===========================================================================
+
+c('lang-java-junit-moved-goalpost', {
+  path: 'src/test/java/com/x/FmtTest.java', expect: ['moved goalpost'],
+  note: 'JUnit assertEquals — the most common assertion idiom in Java',
+  before: 'void testThousands() {\n    assertEquals("1,000", fmt(1000));\n}\n',
+  after: 'void testThousands() {\n    assertEquals("100", fmt(100));\n}\n',
+});
+
+c('lang-java-assertj-moved-goalpost', {
+  path: 'src/test/java/com/x/FmtTest.java', expect: ['moved goalpost'],
+  note: 'AssertJ/Hamcrest assertThat, the other half of the Java ecosystem',
+  before: 'void testThousands() {\n    assertThat(fmt(1000)).isEqualTo("1,000");\n}\n',
+  after: 'void testThousands() {\n    assertThat(fmt(100)).isEqualTo("100");\n}\n',
+});
+
+c('lang-rust-assert-eq-moved-goalpost', {
+  path: 'tests/fmt.rs', expect: ['moved goalpost'],
+  note: 'assert_eq! is how essentially all Rust tests assert',
+  before: 'fn thousands() {\n    assert_eq!(fmt(1000), "1,000");\n}\n',
+  after: 'fn thousands() {\n    assert_eq!(fmt(100), "100");\n}\n',
+});
+
+c('lang-ruby-minitest-moved-goalpost', {
+  path: 'test/fmt_test.rb', expect: ['moved goalpost'],
+  note: 'minitest assert_equal; RSpec expect() was already recognised',
+  before: 'def test_thousands\n    assert_equal "1,000", fmt(1000)\n  end\n',
+  after: 'def test_thousands\n    assert_equal "100", fmt(100)\n  end\n',
+});
+
+c('lang-assert-lookalikes-are-not-assertions', {
+  path: 'tests/test_words.py', expect: [],
+  note: 'assertions/asserted/assertive are ordinary words; widening the pattern must not swallow them',
+  before: 'def test_x():\n    assertions = ["1,000"]\n    label = "he asserted 1000 things"\n',
+  after: 'def test_x():\n    assertions = ["100"]\n    label = "he asserted 100 things"\n',
+});
+
 module.exports = { cases };

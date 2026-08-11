@@ -80,6 +80,17 @@ Re-running the benchmark on 2026-08-07 did two things. It confirmed the publishe
 
   Closed the way Go's `_, err :=` was closed, and recorded under **What it gets wrong** in [`docs/TELLS.md`](TELLS.md) rather than left as a silent gap. An item closed by deciding not to build it counts as done here.
 
+## Done — v0.7.0: widen the sweep, and what widening broke
+
+Five repositories became fifteen, four languages became eight, 171 commits became 496. The question was whether 93.5% was a property of the detector or of the five repositories it was measured on.
+
+- [x] **Precision held, and tightened slightly.** **94.1% by finding (32/34), 95% CI 81–98%**; **85.7% by issue (12/14), CI 60–96%**. The original five repositories still produce exactly 31 findings, so every previously published number stands. Full write-up: [2026-08-11-widened-sweep.md](../benchmarks/results/2026-08-11-widened-sweep.md).
+- [x] **Four defects, three of them user-facing, found by widening.** A renamed file reported every marker inside it as newly written — `git mv` a test file and witness reported skips nobody touched, in the CLI as well as the sweep. `.skip(` matched `iter().skip(1)` in Rust, once in a source file. `skipif(WIN, reason=...)` was read as a disabled test despite carrying its own reason. And `no-op fix` was still driven by `suppression`, a tell removed from the default set in v0.3.0 for being too noisy to report directly.
+- [x] **Assertion recognition fixed before the repositories were added.** `\bassert\b` never matched JUnit's `assertEquals`, Rust's `assert_eq!` or minitest's `assert_equal`. Adding those languages first would have poured commits into the denominator and no findings into the numerator, so findings-per-100 would have fallen and read as an improvement.
+- [x] **Published the coverage the sweep does *not* have.** Three of eight languages produced no findings at all, and counting recognised assertions per repository shows why: `got` 7 of 15,390 changed test lines, `cobra` 0 of 409. ava and Go stdlib assertions are invisible, and `got` is one of the original five — so this was always true and merely uncounted. Findings-per-100 fell 18.1 → 6.9, and an unknown part of that is coverage rather than cleanliness. Stated on the write-up as the most important caveat there.
+
+- [ ] **ava and Go stdlib assertion forms.** `t.is(...)` and `if got != want { t.Errorf(...) }` are a bespoke test API and an if-statement respectively, not calls with `assert` in the name. Detecting them is a feature, not a pattern tweak, and it is what stands between the sweep and actually measuring Go.
+
 ## Then — independence, which needs a second person
 
 The three items below were cut from v0.5.0 for one reason: **none of them can be done by the person or process that produced the first set of labels.** Generating a second opinion from the same source and publishing it as agreement would be, exactly and precisely, making a check pass without making the thing right. This project does not get to do that to its own headline number.

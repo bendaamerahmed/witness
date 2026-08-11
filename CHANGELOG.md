@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.7.0] — 2026-08-11
+
+Five repositories became fifteen, four languages became eight, 171 commits became 496. The question was whether 93.5% was a property of the detector or of the five repositories it was measured on.
+
+**Precision held: 94.1% by finding (32/34), 95% CI 81–98%.** The original five repositories still produce exactly 31 findings, so every previously published number stands. Write-up: [`2026-08-11-widened-sweep.md`](benchmarks/results/2026-08-11-widened-sweep.md).
+
+Getting there took four defect fixes. Three of them affected real users, not just the benchmark, and finding them was the more valuable half of the exercise.
+
+### Fixed
+
+- **A renamed file reported every marker inside it as newly written.** `git diff --name-only` reports a rename only under its new path, so `git show <base>:<new-path>` fails, `before` is empty, and the whole file counts as added. `git mv` a test file with zero content change and witness reported the skips inside it as fresh — **in the CLI, not only the sweep**. Now resolved through `-M --name-status`, reading `before` from the old path. This produced 20 phantom findings in click's directory reorganisation.
+- **`.skip(` matched iterator methods.** `exps.iter().skip(1)` in ripgrep and `external_args.iter().skip(1)` in clap were reported as disabled tests, one of them in a source file. The `.only(` rule beside it had always been anchored to `describe|it|test`; `.skip(` never was, and now is.
+- **`@pytest.mark.skipif(WIN, reason="…")` was read as a disabled test.** A conditional skip carrying its own reason is the declared form this project asks for everywhere else. It now fires only when there is no `reason=`. Eleven of click's findings were this.
+- **`no-op fix` was driven by a tell removed from the default set.** `suppression` left `SCANNER_DEFAULT` in v0.3.0 for being too noisy to report directly, yet `no-op fix` — which is in the default set — still used it as its "a check got weaker" signal. All three of its findings in the new repositories came from that path and two were plainly wrong: gson added 110 lines of new tests carrying `@SuppressWarnings("unchecked")`, and cobra changed `//nolint:golint,staticcheck` to `//nolint:staticcheck`, which suppresses strictly *less*. `suppression` is out of `WEAKENING`; it is still reported as itself in the agent hook.
+
+### Added
+
+- **Ten repositories, four new languages**: click, axios, cobra, chi, viper, ripgrep, clap, gson, okhttp, sinatra — Rust, Java, Kotlin and Ruby alongside the existing Python, JS, TS and Go.
+- **Assertion recognition for the idioms those languages actually use.** `\bassert\b` requires a non-word character after "assert", so it never matched JUnit's `assertEquals`, Rust's `assert_eq!` or minitest's `assert_equal`. Fixed **before** the repositories were added: doing it in the other order would have added commits to the denominator and no findings to the numerator, so findings-per-100 would have fallen and read as an improvement. Five corpus cases pin the new idioms and one pins that `assertions`/`asserted` are still ordinary words.
+
+### Changed
+
+- Headline numbers, everywhere they appear: **94.1%** by finding (CI 81–98%), **85.7%** by issue (CI 60–96%), **6.9** findings and **2.8** issues per 100 commits.
+- **The coverage the sweep does not have is now published.** Three of eight languages produced no findings at all, and counting recognised assertions per repository shows why: `got` 7 of 15,390 changed test lines, `cobra` 0 of 409. ava (`t.is`) and Go stdlib (`if got != want { t.Errorf }`) are invisible to the assertion rules — and `got` is one of the *original five*, so this was always true and simply uncounted. Findings-per-100 fell 18.1 → 6.9 and an unknown part of that is coverage rather than cleanliness. Stated as the most important caveat on the write-up.
+
 ## [0.6.1] — 2026-08-07
 
 ### Fixed

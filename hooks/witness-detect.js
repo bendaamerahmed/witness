@@ -53,10 +53,20 @@ const SUPPRESSION = [
 ];
 
 const SKIP = [
-  { re: /\.(?:skip|todo)\s*\(/, what: '.skip(' },
+  // Anchored to the test-runner prefixes, exactly like `.only(` below it.
+  // A bare `.skip(` also matches iterator methods — `exps.iter().skip(1)` in
+  // ripgrep and `external_args.iter().skip(1)` in clap were both reported as
+  // disabled tests, one of them in a source file. `.skip(n)` is ordinary code in
+  // Rust, JS and Python; `it.skip(` is not.
+  { re: /\b(?:describe|it|test|context|suite|scenario)\.(?:skip|todo)\s*\(/, what: '.skip(' },
   { re: /\b(?:describe|it|test)\.only\s*\(/, what: '.only(' },
   { re: /\bx(?:it|describe|test)\s*\(/, what: 'xit(' },
-  { re: /@pytest\.mark\.(?:skip|skipif|xfail)\b/, what: '@pytest.mark.skip' },
+  { re: /@pytest\.mark\.(?:skip|xfail)\b/, what: '@pytest.mark.skip' },
+  // `skipif` only when it does not carry its own reason. A conditional skip with
+  // `reason=` is the declared form this project asks for — click's
+  // `@pytest.mark.skipif(WIN, reason="os.chmod() is not fully supported on
+  // Windows.")` is correct practice, and eleven of them were reported as cheats.
+  { re: /@pytest\.mark\.skipif\b(?![^)\n]*reason\s*=)/, what: '@pytest.mark.skipif' },
   { re: /@unittest\.(?:skip|expectedFailure)\b/, what: '@unittest.skip' },
   { re: /\bt\.Skip(?:Now)?\s*\(/, what: 't.Skip()' },
   { re: /#\[ignore\]/, what: '#[ignore]' },
@@ -194,9 +204,27 @@ function applyRules(findings, rules) {
   return findings.filter((f) => allow.has(f.tell));
 }
 
-/** Tells that mean a check got weaker. `no-op fix` is defined in terms of these. */
+/**
+ * Tells that mean a check got weaker. `no-op fix` is defined in terms of these.
+ *
+ * `suppression` is deliberately NOT here. It left the scanner default because on
+ * 111 real commits it produced 100 of 136 findings, almost all of them
+ * intentional and long-standing — and leaving it in this set meant a tell judged
+ * too noisy to report directly was still generating reports indirectly, through
+ * a rule that IS in the default set.
+ *
+ * Widening the sweep showed what that costs. All three of its findings in the
+ * new repositories were driven by suppression, and two were plainly wrong:
+ * gson added 110 lines of new tests carrying `@SuppressWarnings("unchecked")`,
+ * which is Java boilerplate on new test code and the opposite of claiming a fix;
+ * cobra changed `//nolint:golint,staticcheck` to `//nolint:staticcheck`, which
+ * suppresses strictly less than before and was still read as a new suppression.
+ *
+ * The agent hook is unaffected: there `suppression` is reported as itself, and
+ * an agent adding `# type: ignore` mid-fix is still caught directly.
+ */
 const WEAKENING = new Set([
-  'softened assertion', 'moved goalpost', 'skip', 'suppression', 'swallow',
+  'softened assertion', 'moved goalpost', 'skip', 'swallow',
 ]);
 
 function isTestPath(p) { return TEST_PATH.test(String(p || '').replace(/\\/g, '/')); }
@@ -336,7 +364,28 @@ function skeleton(line) {
   return line.trim().replace(LITERAL, '\u0000');
 }
 
-const ASSERTIVE = /\bassert\b|\bexpect\s*\(|\bshould\b|EXPECT_|\bassertEqual\b/;
+/**
+ * What counts as an assertion, across the languages the sweep covers.
+ *
+ * `\bassert\b` requires a non-word character after "assert", which quietly
+ * excluded the dominant idiom in three languages: JUnit's `assertEquals`,
+ * Rust's `assert_eq!`, and minitest's `assert_equal`. Only Python's bare
+ * `assert `, Rust's `assert!`, Go testify's `assert.Equal` and RSpec's
+ * `expect(` were ever seen.
+ *
+ * That mattered the moment the sweep was widened past Python/JS/Go: repositories
+ * whose assertions are invisible contribute commits to the denominator and no
+ * findings to the numerator, so findings-per-100 falls and reads as an
+ * improvement while nothing is being measured.
+ *
+ * `assert` followed by `_ . ! (`, whitespace, an uppercase letter, or
+ * end-of-line. That admits assertEquals, assert_eq!, assert.Equal and assert(,
+ * and still excludes `assertions` and `asserted`, which are ordinary words.
+ */
+const ASSERT_HEAD = '(?:[_.!(]|\\s|[A-Z]|$)';
+const ASSERTIVE = new RegExp(
+  `\\bassert${ASSERT_HEAD}|\\brefute${ASSERT_HEAD}|\\bexpect\\s*\\(|\\bshould\\b|EXPECT_|ASSERT_`,
+);
 
 /**
  * Whether a line is an assertion, judged with string literals removed.

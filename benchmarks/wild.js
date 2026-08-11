@@ -46,12 +46,29 @@ const ROOT = path.join(__dirname, '.wild-repos');
 
 // Chosen for language spread and for being unimpeachably healthy codebases:
 // anything witness says about these is far more likely to be witness's fault.
+// The first five were Python, JS/TS and Go only, and 19 of the 31 findings came
+// from one repository. Ten more were added in v0.7.0, weighted towards the
+// languages that had one finding or none — but only after fixing the detector's
+// assertion pattern, which could not see JUnit's assertEquals, Rust's
+// assert_eq! or minitest's assert_equal. Adding those repositories first would
+// have added commits to the denominator and nothing to the numerator.
 const REPOS = [
   { name: 'requests', url: 'https://github.com/psf/requests.git', lang: 'python' },
   { name: 'flask', url: 'https://github.com/pallets/flask.git', lang: 'python' },
   { name: 'got', url: 'https://github.com/sindresorhus/got.git', lang: 'typescript' },
   { name: 'express', url: 'https://github.com/expressjs/express.git', lang: 'javascript' },
   { name: 'gin', url: 'https://github.com/gin-gonic/gin.git', lang: 'go' },
+
+  { name: 'click', url: 'https://github.com/pallets/click.git', lang: 'python' },
+  { name: 'axios', url: 'https://github.com/axios/axios.git', lang: 'javascript' },
+  { name: 'cobra', url: 'https://github.com/spf13/cobra.git', lang: 'go' },
+  { name: 'chi', url: 'https://github.com/go-chi/chi.git', lang: 'go' },
+  { name: 'viper', url: 'https://github.com/spf13/viper.git', lang: 'go' },
+  { name: 'ripgrep', url: 'https://github.com/BurntSushi/ripgrep.git', lang: 'rust' },
+  { name: 'clap', url: 'https://github.com/clap-rs/clap.git', lang: 'rust' },
+  { name: 'gson', url: 'https://github.com/google/gson.git', lang: 'java' },
+  { name: 'okhttp', url: 'https://github.com/square/okhttp.git', lang: 'kotlin' },
+  { name: 'sinatra', url: 'https://github.com/sinatra/sinatra.git', lang: 'ruby' },
 ];
 
 const CONFIG_EXT = /\.(ya?ml|toml|json|cfg|ini)$/i;
@@ -115,16 +132,25 @@ function sweepRepo(repo, n, rules, pin) {
   const findings = [];
   let scanned = 0;
   for (const sha of shas) {
-    let names;
-    try { names = git(['diff', '--name-only', `${sha}^`, sha], cwd).trim().split('\n').filter(Boolean); }
-    catch (e) { continue; }
-    if (!names.length || names.length > MAX_FILES_PER_COMMIT) continue;
+    // `-M --name-status`, not `--name-only`: a renamed file is reported only
+    // under its new path, so reading `before` from that path returns nothing and
+    // the whole file counts as added. click's directory reorganisation produced
+    // 20 findings that way — every long-standing skip marker inside the moved
+    // files, reported as newly written. See bin/witness-scan.js changedPaths().
+    let rows;
+    try {
+      rows = git(['diff', '-M', '--name-status', `${sha}^`, sha], cwd).trim().split('\n').filter(Boolean)
+        .map((l) => l.split('\t'))
+        .map((p) => (p[0].startsWith('R') && p.length >= 3 ? { path: p[2], from: p[1] } : { path: p[1], from: p[1] }))
+        .filter((r) => r.path);
+    } catch (e) { continue; }
+    if (!rows.length || rows.length > MAX_FILES_PER_COMMIT) continue;
 
     const edits = [];
-    for (const name of names) {
+    for (const { path: name, from } of rows) {
       if (!isCodePath(name) && !CONFIG_EXT.test(name)) continue;
-      const show = (ref) => { try { return git(['show', `${ref}:${name}`], cwd); } catch (e) { return ''; } };
-      edits.push({ path: name, before: show(`${sha}^`), after: show(sha) });
+      const show = (ref, p) => { try { return git(['show', `${ref}:${p}`], cwd); } catch (e) { return ''; } };
+      edits.push({ path: name, before: show(`${sha}^`, from), after: show(sha, name) });
     }
     if (!edits.length) continue;
     scanned++;

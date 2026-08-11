@@ -10,8 +10,8 @@
 [![ci](https://github.com/bendaamerahmed/witness/actions/workflows/ci.yml/badge.svg)](https://github.com/bendaamerahmed/witness/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@witness-plugin/witness?style=flat-square&color=111111)](https://www.npmjs.com/package/@witness-plugin/witness)
 [![marketplace](https://img.shields.io/badge/GitHub%20Marketplace-witness-111111?style=flat-square&logo=github)](https://github.com/marketplace/actions/witness-test-integrity-scan)
-![signal](https://img.shields.io/badge/6.4%20issues-per%20100%20real%20commits-111111?style=flat-square)
-![precision](https://img.shields.io/badge/precision-93.5%25%20%2895%25%20CI%2079--98%29-111111?style=flat-square)
+![signal](https://img.shields.io/badge/2.8%20issues-per%20100%20real%20commits-111111?style=flat-square)
+![precision](https://img.shields.io/badge/precision-94.1%25%20%2895%25%20CI%2081--98%29-111111?style=flat-square)
 ![deps](https://img.shields.io/badge/dependencies-0-111111?style=flat-square)
 ![hooks](https://img.shields.io/badge/hooks-advisory%20only-111111?style=flat-square)
 [![license](https://img.shields.io/badge/license-MIT-111111?style=flat-square)](LICENSE)
@@ -37,13 +37,13 @@ We found this by running a benchmark, not by theorising. Across 96 cells of an a
 
 | | |
 |---|---|
-| **93.5%** | precision on 171 real merged commits, 95% CI **79–98%** — every finding hand-labelled, both false positives published ([sweep](benchmarks/results/2026-08-06-wild-sweep.md)) |
-| **6.4** | issues per 100 real merged commits, across 5 OSS repos it has never seen |
+| **94.1%** | precision on 496 real merged commits across 8 languages, 95% CI **81–98%** — every finding hand-labelled, both false positives published ([sweep](benchmarks/results/2026-08-06-wild-sweep.md)) |
+| **2.8** | issues per 100 real merged commits, across 15 OSS repos it has never seen |
 | **94.4%** | recall on 124 real agent-modified checks, pooled over two independent runs (117/124), 95% CI **89–97%** ([replication](benchmarks/results/2026-08-07-replication.md)) |
 | **8** | tells detected across Python, JS/TS, Go, Rust, Ruby, Java, shell, CI config |
 | **0** | dependencies, network calls, telemetry |
 
-<sub>That precision figure used to read "100% on a labeled corpus", which was true and misleading: the corpus was written by the same person as the detector. Run against real repositories it produced <b>122 findings per 100 commits</b> — noise. Three rounds of fixing that is what v0.3.0 and v0.4.0 are. The number above is now one rater's verdict on 31 real findings from <a href="benchmarks/wild-pins.json">pinned</a> commits, scored by <code>npm run wild:precision</code> in CI — <b>93.5% by finding (95% CI 79–98%), 81.8% after grouping (95% CI 52–95%)</b>, and <b>no recall figure in the wild</b>, because that would mean reading all 171 commits by hand and nobody has. Those intervals are the honest width of 31 observations, and the issue figure rests on 11: read them as ranges, not as the headline. The scorer also breaks the number out per tell and per language, where several cells rest on a single finding. One rater who maintains the tool is not independence. Independent false-positive reports are the <a href=".github/ISSUE_TEMPLATE/false-positive.yml">most valuable issue you can file</a>.</sub>
+<sub>That precision figure used to read "100% on a labeled corpus", which was true and misleading: the corpus was written by the same person as the detector. Run against real repositories it produced <b>122 findings per 100 commits</b> — noise. Three rounds of fixing that is what v0.3.0 and v0.4.0 are. The number above is now one rater's verdict on 34 real findings from <a href="benchmarks/wild-pins.json">pinned</a> commits, scored by <code>npm run wild:precision</code> in CI — <b>94.1% by finding (95% CI 81–98%), 85.7% after grouping (95% CI 60–96%)</b>, and <b>no recall figure in the wild</b>, because that would mean reading all 496 commits by hand and nobody has. Those intervals are the honest width of 34 observations, and the issue figure rests on 14: read them as ranges, not as the headline. Java, Kotlin and Rust produced no findings at all across 128 commits, and the scorer prints them as <i>unmeasured</i> rather than as perfect. The scorer also breaks the number out per tell and per language, where several cells rest on a single finding. One rater who maintains the tool is not independence. Independent false-positive reports are the <a href=".github/ISSUE_TEMPLATE/false-positive.yml">most valuable issue you can file</a>.</sub>
 
 ## Why it matters
 
@@ -109,7 +109,7 @@ tests/test_fmt.py:7  moved goalpost  assert fmt(1000) == "1000" -> assert fmt(10
 
 No dependencies, no network — the PDF writer is hand-rolled rather than pull one in. Exit `0` unless you asked for a gate, and unknown flags are refused with a suggestion instead of silently ignored.
 
-Two tells are **off by default** in the CLI, both for measured reasons. `suppression` was 100 of the first sweep's 136 findings and almost every one was intentional. `deleted check` produces 3 findings on 171 pinned commits and one of the three is a duplicate whose surviving twin lives in a file the commit never touched — invisible to anything reading only a diff, so 2 of 3, below the floors this project gates on. Both stay on in the agent hook, where the diff really is the whole change and an agent deleting a failing test mid-fix is exactly the case worth catching. `--all` turns them on anywhere.
+Two tells are **off by default** in the CLI, both for measured reasons. `suppression` was 100 of the first sweep's 136 findings and almost every one was intentional. `deleted check` produces 10 findings on 496 pinned commits, and the ones that were read include a duplicate whose surviving twin lives in a file the commit never touched — invisible to anything reading only a diff. Both stay on in the agent hook, where the diff really is the whole change and an agent deleting a failing test mid-fix is exactly the case worth catching. `--all` turns them on anywhere.
 
 ## Or in your agent, live
 
@@ -195,7 +195,7 @@ Four instrument bugs were found and are documented in the write-up — three by 
 ```bash
 npm run verify          # drift, versions, links, 122 tests, corpus precision gate
 npm run wild:clone      # ~200MB of clones, once
-npm run wild            # the pinned sweep over 171 real merged commits
+npm run wild            # the pinned sweep over 496 real merged commits
 npm run wild:precision   # score that sweep against the hand-labels
 npm run selftest        # benchmark instrument (needs python + pytest)
 npm run sync            # regenerate per-host rule copies from AGENTS.md

@@ -7,7 +7,7 @@ const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
 
 const DOCS = ['README.md', 'CONTRIBUTING.md', 'SECURITY.md', 'docs/SPEC.md', 'docs/TELLS.md',
-  'docs/CI.md', 'docs/PUBLISHING.md', 'docs/ROADMAP.md', 'CODE_OF_CONDUCT.md', 'CHANGELOG.md', 'benchmarks/README.md', 'benchmarks/results/2026-08-06-first-run.md', 'benchmarks/results/2026-08-06-wild-sweep.md', 'benchmarks/results/2026-08-07-replication.md', 'examples/README.md'];
+  'docs/CI.md', 'docs/PUBLISHING.md', 'docs/ROADMAP.md', 'CODE_OF_CONDUCT.md', 'CHANGELOG.md', 'benchmarks/README.md', 'benchmarks/results/2026-08-06-first-run.md', 'benchmarks/results/2026-08-06-wild-sweep.md', 'benchmarks/results/2026-08-07-replication.md', 'benchmarks/results/2026-08-11-widened-sweep.md', 'examples/README.md'];
 
 let failed = false;
 for (const doc of DOCS) {

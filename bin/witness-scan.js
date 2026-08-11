@@ -220,16 +220,37 @@ function git(args, cwd) {
   });
 }
 
+/**
+ * Changed paths, each with the path its content came FROM.
+ *
+ * `--name-only` reports a renamed file under its new path only. `git show
+ * <base>:<new-path>` then fails, `before` comes back empty, and every line in
+ * the file counts as added — so moving a test file reported every skip marker
+ * and suppression inside it as newly written. Zero content change, confident
+ * findings about code nobody touched. `-M --name-status` reports renames as
+ * `R<score>\told\tnew`, and the old path is what `before` has to be read from.
+ */
+function changedPaths(args, cwd) {
+  const out = [];
+  for (const line of git(args, cwd).split('\n')) {
+    if (!line.trim()) continue;
+    const parts = line.split('\t');
+    const status = parts[0];
+    if (status.startsWith('R') && parts.length >= 3) out.push({ path: parts[2], from: parts[1] });
+    else if (parts[1]) out.push({ path: parts[1], from: parts[1] });
+  }
+  return out;
+}
+
 function editsFromGit(opt) {
   const ref = opt.base ? git(['merge-base', 'HEAD', opt.base], opt.cwd).trim() : 'HEAD';
-  const args = opt.base ? ['diff', '--name-only', `${ref}...HEAD`]
-    : opt.staged ? ['diff', '--name-only', '--cached']
-      : ['diff', '--name-only'];
-  const names = git(args, opt.cwd).split('\n').map((s) => s.trim()).filter(Boolean);
+  const args = opt.base ? ['diff', '-M', '--name-status', `${ref}...HEAD`]
+    : opt.staged ? ['diff', '-M', '--name-status', '--cached']
+      : ['diff', '-M', '--name-status'];
   const edits = [];
-  for (const name of names) {
+  for (const { path: name, from } of changedPaths(args, opt.cwd)) {
     let before = '';
-    try { before = git(['show', `${ref}:${name}`], opt.cwd); } catch (e) { before = ''; }
+    try { before = git(['show', `${ref}:${from}`], opt.cwd); } catch (e) { before = ''; }
     let after = '';
     if (opt.base || opt.staged) {
       try { after = opt.base ? git(['show', `HEAD:${name}`], opt.cwd) : git(['show', `:${name}`], opt.cwd); }
